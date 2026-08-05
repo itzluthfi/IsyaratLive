@@ -1,0 +1,9 @@
+venv/
+dataset/raw/
+dataset/split/
+preprocessing/landmarks/
+training/checkpoints/
+export/tfjs_model/
+*.mp4
+*.npy
+__pycache__/

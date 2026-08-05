@@ -1,0 +1,59 @@
+# ml/ — Training model klasifikasi gloss (Fase 1, PRD bagian 15.2)
+
+Bagian ini **jalan terpisah/offline** dari `frontend/` dan `backend/` — hasil
+akhirnya (model TensorFlow.js) disalin ke `frontend/public/models/`.
+
+Butuh mesin dengan Python 3.10+ (idealnya GPU untuk training, Colab juga bisa)
+dan kredensial Kaggle sendiri — keduanya tidak tersedia di lingkungan
+eksekusi Claude Code ini, jadi bagian ini disiapkan sebagai skeleton siap
+jalan, bukan sudah dieksekusi.
+
+## Setup
+
+```bash
+cd ml
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Langkah (sesuai PRD 15.2 Fase 1)
+
+1. **Unduh dataset WL-BISINDO dari Kaggle** — butuh `kaggle.json` (API token
+   dari akun Kaggle-mu) di `~/.kaggle/kaggle.json`:
+   ```bash
+   kaggle datasets download -d glennleonali/wl-bisindo -p dataset/raw --unzip
+   ```
+2. **Split Signer-Independent**:
+   ```bash
+   python dataset/organize_dataset.py --input dataset/raw --output dataset/split --scheme SI
+   ```
+3. **Ekstraksi landmark pose** dari tiap video (MediaPipe Python):
+   ```bash
+   python preprocessing/extract_landmarks.py --input dataset/split --output preprocessing/landmarks
+   ```
+4. **Training** (baseline sequence classifier di atas landmark):
+   ```bash
+   python training/train.py --data preprocessing/landmarks --epochs 50
+   ```
+5. **Evaluasi akurasi** per signer (target 80-90% skema SI, lihat PRD bagian 9
+   soal risiko akurasi bervariasi 48-91% tergantung signer).
+6. **Ekspor ke TensorFlow.js**:
+   ```bash
+   python export/export_tfjs.py --model training/checkpoints/best.keras --output export/tfjs_model
+   cp -r export/tfjs_model/* ../frontend/public/models/gloss-classifier/
+   ```
+
+## Catatan
+
+- Dataset asli (CC BY-NC 4.0, non-komersial) — cantumkan sitasi BibTeX resmi
+  dari repo `AceKinnn/WL-BISINDO` di dokumentasi/proposal, jangan commit file
+  dataset mentah ke Git (lihat `.gitignore`).
+- Model referensi PRD adalah Siformer/SPOTER (transformer berbasis landmark
+  pose). `training/train.py` di sini adalah baseline sequence classifier
+  (Conv1D + LSTM di atas landmark) sebagai titik awal — ganti dengan
+  implementasi Siformer/SPOTER dari repo `AceKinnn/WL-BISINDO` untuk hasil
+  yang sesuai baseline akurasi di PRD bagian 9.
+- `GLOSS_WINDOW_MS`/`SEQUENCE_LENGTH` di
+  `frontend/src/components/GlossClassifier.tsx` harus disamakan dengan
+  panjang sequence yang dipakai saat training di sini.
