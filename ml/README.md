@@ -3,12 +3,33 @@
 Bagian ini **jalan terpisah/offline** dari `frontend/` dan `backend/` — hasil
 akhirnya (model TensorFlow.js) disalin ke `frontend/public/models/`.
 
-Butuh mesin dengan Python 3.10+ (idealnya GPU untuk training, Colab juga bisa)
-dan kredensial Kaggle sendiri — keduanya tidak tersedia di lingkungan
-eksekusi Claude Code ini, jadi bagian ini disiapkan sebagai skeleton siap
-jalan, bukan sudah dieksekusi.
+Butuh mesin dengan Python 3.10+ (idealnya GPU untuk training) dan kredensial
+Kaggle sendiri — keduanya tidak tersedia di lingkungan eksekusi Claude Code
+ini, jadi bagian ini disiapkan sebagai skeleton siap jalan, bukan sudah
+dieksekusi.
 
-## Setup
+## Cara tercepat: Google Colab (direkomendasikan)
+
+Buka `ml/colab/train_gloss_classifier.ipynb` di [Google Colab](https://colab.research.google.com/)
+(File → Upload notebook), pilih runtime GPU (T4 cukup), lalu jalankan
+sel demi sel. Notebook ini sudah berisi seluruh pipeline Fase 1 secara
+end-to-end (identik logikanya dengan script di folder ini): unduh dataset
+Kaggle → split Signer-Independent → ekstraksi landmark → training → ekspor
+TFJS → unduh hasil model sebagai `.zip`. Butuh `kaggle.json` (API token dari
+akun Kaggle-mu) untuk diupload saat diminta.
+
+Setelah selesai, ekstrak `gloss-classifier.zip` dan salin isinya ke
+`frontend/public/models/gloss-classifier/`.
+
+## Setup lokal (alternatif, butuh Python 3.10+ & ruang disk ~3GB kosong)
+
+> Catatan: `requirements.txt` sudah diperbaiki dari versi awal —
+> `tensorflow==2.16.1` semula bentrok dengan `tensorflowjs`
+> (`tensorflow-decision-forests` butuh `tensorflow~=2.15.0`), dan
+> `orbax-checkpoint` versi terbaru mensyaratkan `uvloop` yang **tidak
+> didukung di Windows**. Sudah dipin ke `tensorflow==2.15.1` dan
+> `orbax-checkpoint==0.4.4` supaya `pip install -r requirements.txt` jalan
+> bersih di Windows.
 
 ```bash
 cd ml

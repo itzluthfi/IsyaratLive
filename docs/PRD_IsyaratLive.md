@@ -207,14 +207,14 @@ Dataset ini punya repo resmi pendamping — [`AceKinnn/WL-BISINDO`](https://gith
 ## 10. Fitur
 
 ### MVP (wajib untuk demo)
-- [ ] Mode 1: kamera → deteksi isyarat real-time → teks tersusun rapi (LLM) → suara
-- [ ] Riwayat percakapan tersimpan, bisa di-scroll
-- [ ] Fallback mode degradasi saat koneksi terputus
+- [~] Mode 1: kamera → deteksi isyarat real-time → teks tersusun rapi (LLM) → suara — *pipeline & UI lengkap (kode kompilasi bersih, dev server jalan), tapi model klasifikasi gloss belum dilatih (placeholder), jadi belum bisa dites end-to-end dengan gerakan isyarat sungguhan*
+- [~] Riwayat percakapan tersimpan, bisa di-scroll — *endpoint CRUD & UI ada, belum diuji terhadap MySQL sungguhan*
+- [x] Fallback mode degradasi saat koneksi terputus — *kode ada di `SignToTextMode.tsx`, tampilkan gloss mentah saat `/normalize` gagal*
 
 ### Pengembangan Lanjutan (jika waktu cukup)
-- [ ] Mode 2: teks/suara → video isyarat (dictionary-based)
+- [~] Mode 2: teks/suara → video isyarat (dictionary-based) — *UI (`TextToSignMode.tsx`) ada, folder `dictionary/` masih kosong (belum ada video/GIF direkam)*
 - [ ] Mode belajar isyarat (kamera memvalidasi gerakan pengguna untuk latihan)
-- [ ] Integrasi Hermes Agent via Telegram untuk review riwayat
+- [~] Integrasi Hermes Agent via Telegram untuk review riwayat — *service skeleton (`services/hermes.ts`) ada, belum tersambung/diuji*
 
 ### Di Luar Cakupan Kompetisi
 - Video call jarak jauh (real-time dua sisi)
@@ -315,52 +315,63 @@ isyaratlive/
 
 ### 15.2 Urutan Kerja (Checklist Berurutan)
 
-**FASE 0 — Setup**
-- [ ] Inisialisasi repo Git, struktur folder sesuai 15.1
-- [ ] Setup lingkungan Python (`ml/`) — `venv`, `requirements.txt` (mediapipe, tensorflow, tensorflowjs)
-- [ ] Setup proyek frontend — `npm create vite@latest frontend -- --template react-ts`, install `@mediapipe/tasks-vision`, `@tensorflow/tfjs`, Tailwind
-- [ ] Setup proyek backend — `npm init`, Express, dotenv, mysql2
+**FASE 0 — Setup** ✅ *selesai*
+- [x] Inisialisasi repo Git, struktur folder sesuai 15.1
+- [x] Setup proyek frontend — Vite + React-TS, `@mediapipe/tasks-vision`, `@tensorflow/tfjs`, Tailwind terpasang (`npm install` bersih, `tsc --noEmit` tanpa error, `npm run dev` jalan di :5173)
+- [x] Setup proyek backend — Express, dotenv, mysql2 terpasang (`npm install` bersih, `tsc --noEmit` tanpa error, `npm run dev` jalan di :3001)
+- [ ] Setup lingkungan Python (`ml/`) — `venv` belum dibuat/divalidasi; `requirements.txt` ada tapi belum `pip install`
 
-**FASE 1 — Model & Dataset (Bulan 1)**
+**FASE 1 — Model & Dataset (Bulan 1)** ❌ *belum dieksekusi — blocker utama saat ini*
+- [x] Notebook Colab end-to-end disiapkan (`ml/colab/train_gloss_classifier.ipynb`) — mencakup seluruh langkah di bawah, siap dijalankan begitu ada `kaggle.json`. Dipakai karena drive lokal tim (C:) nyaris penuh (1.7GB tersisa dari 459GB) sehingga instalasi `ml/venv` lokal (butuh ~3GB) gagal
 - [ ] Unduh dataset WL-BISINDO dari Kaggle (`glennleonali/wl-bisindo`)
-- [ ] Clone/fork repo `AceKinnn/WL-BISINDO`, salin `organize_dataset.py` + metadata JSON ke `ml/dataset/`
+- [ ] Clone/fork repo `AceKinnn/WL-BISINDO`, salin `organize_dataset.py` + metadata JSON ke `ml/dataset/` (script ada di `ml/dataset/organize_dataset.py`, belum dijalankan — belum ada dataset)
 - [ ] Jalankan `organize_dataset.py` dengan skema **Signer-Independent** (`SI_split_metadata.json`)
-- [ ] Tulis script ekstraksi landmark pose dari video (di `ml/preprocessing/`), ikuti pipeline preprocessing Siformer/SPOTER di repo referensi
-- [ ] Fine-tune Siformer (atau SPOTER sebagai pembanding) pada 32 kelas kata di `ml/training/`
+- [ ] Tulis script ekstraksi landmark pose dari video (skeleton ada di `ml/preprocessing/extract_landmarks.py`, belum dijalankan terhadap data asli)
+- [ ] Fine-tune Siformer (atau SPOTER sebagai pembanding) pada 32 kelas kata (skeleton ada di `ml/training/train.py`, belum ada training run)
 - [ ] Evaluasi akurasi pada skema SI, catat hasil per signer
-- [ ] Ekspor model terlatih ke format TensorFlow.js (`ml/export/`) menggunakan `tensorflowjs_converter`
-- [ ] Salin hasil export ke `frontend/public/models/`
-- [ ] **Validasi checkpoint**: buat halaman test sederhana di frontend yang load model TFJS + `@mediapipe/tasks-vision` HandLandmarker, uji real-time di browser dengan minimal 5 kata sampel
+- [ ] Ekspor model terlatih ke format TensorFlow.js (skeleton ada di `ml/export/export_tfjs.py`, belum ada model untuk diekspor)
+- [ ] Salin hasil export ke `frontend/public/models/` — folder `frontend/public/models/gloss-classifier/` masih kosong; `GlossClassifier.tsx` sudah siap load model dari path ini begitu tersedia
+- [ ] **Validasi checkpoint**: buat halaman test sederhana di frontend yang load model TFJS + `@mediapipe/tasks-vision` HandLandmarker, uji real-time di browser dengan minimal 5 kata sampel — **belum bisa dilakukan tanpa model terlatih**
 
-**FASE 2 — Backend & Integrasi LLM (Bulan 2, minggu 1-2)**
-- [ ] Buat endpoint `POST /normalize` di backend — terima array gloss, panggil 9Router
-- [ ] Desain & uji prompt normalisasi gloss→kalimat (butuh iterasi, simpan beberapa versi prompt untuk dibandingkan)
-- [ ] Setup koneksi MySQL, skema tabel riwayat percakapan (`conversations`, `messages`)
-- [ ] Buat endpoint CRUD riwayat (`GET/POST /history`)
-- [ ] Uji fallback: matikan koneksi ke 9Router secara sengaja, pastikan backend merespons error yang bisa ditangani frontend (bukan crash)
+**FASE 2 — Backend & Integrasi LLM (Bulan 2, minggu 1-2)** 🟡 *skeleton lengkap, belum diuji dengan kredensial asli*
+- [x] Buat endpoint `POST /normalize` di backend — terima array gloss, panggil 9Router (`backend/src/routes/normalize.ts` + `services/9router.ts`)
+- [ ] Desain & uji prompt normalisasi gloss→kalimat (1 versi prompt sudah ada di `services/9router.ts`, belum diiterasi/dibandingkan dengan variasi lain karena belum ada API key 9Router asli untuk uji coba)
+- [x] Setup koneksi MySQL, skema tabel riwayat percakapan (`backend/src/db/schema.sql`, `db/index.ts`) — kode ada, belum divalidasi terhadap instance MySQL sungguhan
+- [x] Buat endpoint CRUD riwayat (`GET/POST /history` di `backend/src/routes/history.ts`)
+- [ ] Uji fallback: matikan koneksi ke 9Router secara sengaja, pastikan backend merespons error yang bisa ditangani frontend (bukan crash) — logika error sudah ada (`NineRouterError`), belum diuji end-to-end
 
-**FASE 3 — Frontend Mode 1 End-to-End (Bulan 2, minggu 3-4)**
-- [ ] `CameraCapture` — minta izin kamera, render video stream
-- [ ] `LandmarkDetector` — integrasi `HandLandmarker` mode video real-time
-- [ ] `GlossClassifier` — buffer landmark sequence, jalankan inferensi TFJS, keluarkan gloss
-- [ ] Hubungkan gloss ke `lib/api.ts` → panggil `/normalize` → tampilkan hasil di `ChatDisplay`
-- [ ] `SpeechOutput` — integrasi Web Speech API untuk baca teks hasil normalisasi
-- [ ] Implementasi mode degradasi: jika `/normalize` gagal, tampilkan gloss mentah langsung
-- [ ] **Validasi checkpoint**: alur lengkap kamera → suara berjalan tanpa error untuk 32 kata target
+**FASE 3 — Frontend Mode 1 End-to-End (Bulan 2, minggu 3-4)** 🟡 *skeleton lengkap, belum divalidasi dengan model asli*
+- [x] `CameraCapture` — minta izin kamera, render video stream
+- [x] `LandmarkDetector` — integrasi `HandLandmarker` mode video real-time
+- [x] `GlossClassifier` — buffer landmark sequence, jalankan inferensi TFJS, keluarkan gloss (logika ada, tapi model TFJS yang di-load masih placeholder/belum ada — lihat Fase 1)
+- [x] Hubungkan gloss ke `lib/api.ts` → panggil `/normalize` → tampilkan hasil di `ChatDisplay`
+- [x] `SpeechOutput` — integrasi Web Speech API untuk baca teks hasil normalisasi
+- [x] Implementasi mode degradasi: jika `/normalize` gagal, tampilkan gloss mentah langsung
+- [ ] **Validasi checkpoint**: alur lengkap kamera → suara berjalan tanpa error untuk 32 kata target — **belum bisa divalidasi, menunggu model asli dari Fase 1**
 
-**FASE 4 — Mode 2 & Penyempurnaan (Bulan 3, jika waktu cukup)**
-- [ ] Siapkan/rekam 32 video/GIF isyarat pendek untuk dictionary Mode 2 (bisa direkam ulang oleh tim, boleh berbeda dari dataset training karena hanya untuk ditampilkan, bukan untuk training)
-- [ ] `TextToSignMode` — Web Speech API (STT) atau input teks → pecah kata kunci → mapping ke dictionary → tampilkan berurutan
+**FASE 4 — Mode 2 & Penyempurnaan (Bulan 3, jika waktu cukup)** 🟡 *UI ada, aset belum*
+- [ ] Siapkan/rekam 32 video/GIF isyarat pendek untuk dictionary Mode 2 — folder `dictionary/` masih kosong (hanya `.gitkeep`)
+- [x] `TextToSignMode` — Web Speech API (STT) atau input teks → pecah kata kunci → mapping ke dictionary → tampilkan berurutan (kode ada di `TextToSignMode.tsx`, tidak bisa ditampilkan penuh tanpa video dictionary)
 - [ ] Polish UI/UX, uji dengan pengguna di luar tim jika memungkinkan
-- [ ] (Opsional) Integrasi Hermes Agent untuk akses riwayat via Telegram
+- [~] (Opsional) Integrasi Hermes Agent untuk akses riwayat via Telegram — service skeleton (`services/hermes.ts`) ada, belum tersambung ke bot Telegram sungguhan
 
-**FASE 5 — Deployment & Demo (Bulan 3, minggu terakhir)**
+**FASE 5 — Deployment & Demo (Bulan 3, minggu terakhir)** ❌ *belum dimulai*
 - [ ] Deploy frontend (build statis) ke VPS `vmi3108861` atau `newgabungan`
 - [ ] Deploy backend Node.js, setup reverse proxy OpenLiteSpeed
 - [ ] Pasang HTTPS (Let's Encrypt) — wajib untuk akses kamera browser
 - [ ] Uji end-to-end di environment produksi (bukan localhost)
 - [ ] Rekam video demo 10 menit sesuai format final GEMASTIK
 - [ ] Siapkan kode sumber & dokumentasi rapi untuk sesi tanya-jawab juri
+
+### 15.5 Ringkasan Status (update 2026-08-05)
+
+**Sudah jadi:** Fase 0 penuh, Fase 2 & 3 dalam bentuk skeleton kode yang lengkap dan terverifikasi jalan (deps terinstal bersih, TypeScript compile tanpa error, `npm run dev` backend & frontend sama-sama berhasil start).
+
+**Belum jadi — gap terbesar dari PRD:** Fase 1 (training model klasifikasi gloss) sama sekali belum dieksekusi — dataset belum diunduh, tidak ada model terlatih. Ini blocker utama: tanpa model asli, Mode 1 tidak bisa didemokan end-to-end sungguhan (hanya pipeline kosong). Dictionary video Mode 2 juga masih kosong, dan integrasi 9Router/MySQL/Hermes belum diuji dengan kredensial nyata. Deployment ke VPS belum dimulai.
+
+**Rekomendasi urutan lanjutan:** prioritaskan Fase 1 (unduh dataset Kaggle → training → export TFJS) sebelum menyentuh fitur lain, karena ini sesuai catatan 15.4 ("jangan mulai Fase 3 sebelum Fase 1 punya checkpoint validasi") dan merupakan risiko rundown terbesar terhadap timeline 3 bulan.
+
+**Update 2026-08-05 (lanjutan):** dicoba jalankan Fase 1 secara lokal — `pip install -r ml/requirements.txt` awalnya gagal karena dua konflik versi (`tensorflow` vs `tensorflowjs`, dan `orbax-checkpoint` butuh `uvloop` yang tak didukung Windows), sudah diperbaiki di `ml/requirements.txt`. Namun instalasi tetap gagal karena **disk C: tim nyaris penuh** (1.7GB tersisa dari 459GB) — tidak cukup untuk `venv` (~1.4GB+) plus dataset (±2.16GB). Sebagai jalan keluar, disiapkan notebook Colab end-to-end (`ml/colab/train_gloss_classifier.ipynb`) yang menjalankan seluruh Fase 1 di cloud tanpa perlu instalasi lokal — tinggal upload `kaggle.json` dan jalankan sel demi sel, lalu unduh model hasil dan salin ke `frontend/public/models/gloss-classifier/`. **Aksi berikutnya ada di tangan tim:** jalankan notebook tersebut (perlu akun Kaggle + API token), atau bebaskan ruang disk lokal jika lebih suka training lokal.
 
 ### 15.3 Dependensi Kunci per Tahap
 
