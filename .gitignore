@@ -1,0 +1,6 @@
+# Compose deployment secrets (DOMAIN/ACME_EMAIL/MYSQL_*) — lihat .env.example
+.env
+
+# OS / editor noise
+.DS_Store
+Thumbs.db

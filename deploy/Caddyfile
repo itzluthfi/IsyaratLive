@@ -1,0 +1,12 @@
+# Reverse proxy edge + HTTPS otomatis (Let's Encrypt) — WAJIB, akses kamera
+# browser hanya diizinkan di HTTPS (lihat PRD §8). Domain & email diisi
+# lewat variabel environment DOMAIN / ACME_EMAIL di root .env.
+#
+# Kalau belum punya domain dan cuma mau tes cepat via IP, ganti baris
+# "{$DOMAIN}" di bawah menjadi ":80" lalu akses via http://IP-VPS
+# (kamera TIDAK akan bisa diakses browser tanpa HTTPS, cukup untuk cek API/UI saja).
+
+{$DOMAIN} {
+    reverse_proxy frontend:80
+    tls {$ACME_EMAIL}
+}

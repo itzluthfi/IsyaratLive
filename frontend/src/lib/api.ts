@@ -24,6 +24,8 @@ export interface ConversationMessage {
   gloss: string[]
   text: string
   createdAt: string
+  /** Arah pesan dalam Room: 'sign-to-text' (dari kamera) atau 'text-to-sign' (dari ketik/suara). Opsional demi kompatibilitas riwayat lama. */
+  direction?: 'sign-to-text' | 'text-to-sign'
 }
 
 export async function fetchHistory(): Promise<ConversationMessage[]> {

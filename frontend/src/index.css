@@ -1,5 +1,89 @@
 @import "tailwindcss";
 
+/*
+ * Sistem desain IsyaratLive — Clean Light Mode (gaya Vercel / Linear / Radix UI).
+ * Menggunakan palet netral slate-zinc, kontras tinggi, border 1px presisi,
+ * dan warna semantik terbatas (emerald = connected/active, amber = offline/degraded, slate-900 = primary).
+ */
+
 body {
   margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
 }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl bg-white border border-slate-200 shadow-sm transition-all;
+  }
+
+  .card-subtle {
+    @apply rounded-xl bg-slate-50/80 border border-slate-200/80;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none bg-slate-900 text-white hover:bg-slate-800 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 shadow-xs;
+  }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none bg-teal-600 text-white hover:bg-teal-700 shadow-sm;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none bg-rose-600 text-white hover:bg-rose-700 shadow-sm;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  .badge-neutral {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-slate-100 text-slate-700 border-slate-200;
+  }
+
+  .badge-active {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-emerald-50 text-emerald-800 border-emerald-200;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-amber-50 text-amber-900 border-amber-200;
+  }
+
+  .badge-accent {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border bg-teal-50 text-teal-800 border-teal-200;
+  }
+
+  .tab-pill {
+    @apply rounded-md px-3 py-1.5 text-xs font-semibold transition-all text-slate-600 hover:text-slate-900;
+  }
+
+  .tab-pill-active {
+    @apply rounded-md px-3 py-1.5 text-xs font-semibold transition-all bg-white text-slate-900 shadow-xs border border-slate-200/80;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-800;
+  }
+}
+

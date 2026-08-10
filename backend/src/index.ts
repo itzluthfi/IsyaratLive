@@ -1,22 +1,14 @@
 import 'dotenv/config'
-import express from 'express'
-import cors from 'cors'
-import { normalizeRouter } from './routes/normalize.js'
-import { historyRouter } from './routes/history.js'
+import { createServer } from 'node:http'
+import { createApp } from './app.js'
+import { attachSignaling } from './signaling.js'
 
-const app = express()
 const PORT = Number(process.env.PORT ?? 3001)
 
-app.use(cors())
-app.use(express.json())
+const app = createApp()
+const httpServer = createServer(app)
+attachSignaling(httpServer)
 
-app.use('/api', normalizeRouter)
-app.use('/api', historyRouter)
-
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true })
-})
-
-app.listen(PORT, () => {
-  console.log(`IsyaratLive backend listening on port ${PORT}`)
+httpServer.listen(PORT, () => {
+  console.log(`IsyaratLive backend listening on port ${PORT} (HTTP + Socket.io signaling)`)
 })

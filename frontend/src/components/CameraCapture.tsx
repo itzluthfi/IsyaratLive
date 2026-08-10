@@ -149,7 +149,7 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
           {/* Loading Indicator */}
           {isLoading && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-xs text-white p-4 text-center">
-              <div className="h-9 w-9 animate-spin rounded-full border-3 border-cyan-400 border-t-transparent mb-3" />
+              <div className="h-9 w-9 animate-spin rounded-full border-3 border-teal-400 border-t-transparent mb-3" />
               <p className="text-xs font-bold">Meminta Izin & Membuka Kamera…</p>
               <p className="text-[11px] text-slate-400 mt-1">Harap pilih "Izinkan" / "Allow" pada notifikasi browser HP Anda</p>
             </div>
@@ -167,7 +167,7 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <button
                   onClick={() => startCamera(facingMode)}
-                  className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-cyan-500 active:scale-95 transition-all"
+                  className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all"
                 >
                   🔄 Coba Minta Izin Kamera Lagi
                 </button>

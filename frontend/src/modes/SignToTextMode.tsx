@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import * as tf from '@tensorflow/tfjs'
 import { CameraCapture } from '../components/CameraCapture'
 import {
@@ -15,12 +15,12 @@ import {
   extractRawWrists,
   landmarksToVector,
   landmarksAndPoseToVector,
-  landmarksTo210DVector,
-  landmarksTo256DVector,
-  landmarksTo320DVector,
   loadGlossModel,
+  GLOSS_MODEL_VERSIONS,
+  GLOSS_MODEL_INFO,
+  LATEST_GLOSS_MODEL,
+  type GlossModelVersion,
 } from '../components/GlossClassifier'
-import { ChatDisplay } from '../components/ChatDisplay'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory, type ConversationMessage } from '../lib/api'
 import { SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
@@ -29,17 +29,31 @@ const GLOSS_AUTO_FLUSH_MS = 20000 // auto-flush 20 detik jika pengguna lupa gest
 
 interface SignToTextModeProps {
   onOpenDictionaryModal?: () => void
+  onAddMessage: (message: ConversationMessage) => void
+  /** Melaporkan status live (gloss yang sedang terkumpul & status mode degradasi) ke Room pemanggil, untuk ditampilkan di feed obrolan bersama. */
+  onLiveStatusChange?: (status: { liveGloss: string[]; degraded: boolean }) => void
+}
+
+export interface SignToTextModeHandle {
+  /** Matikan mode degradasi paksa (dipanggil dari tombol di ChatDisplay level Room). */
+  disableForcedDegraded: () => void
 }
 
 /** Mode 1: kamera -> deteksi isyarat real-time -> LLM / Instan Per Kata -> Suara. */
-export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
+export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModeProps>(function SignToTextMode(
+  { onOpenDictionaryModal, onAddMessage, onLiveStatusChange },
+  ref,
+) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [liveGloss, setLiveGloss] = useState<string[]>([])
   const [degraded, setDegraded] = useState(false)
   const [forcedDegraded, setForcedDegraded] = useState(false)
-  const [modelVer, setModelVer] = useState<'v1' | 'v2' | 'v3' | 'v4' | 'v5' | 'v6'>('v6')
+
+  useImperativeHandle(ref, () => ({
+    disableForcedDegraded: () => setForcedDegraded(false),
+  }))
+  const [modelVer, setModelVer] = useState<GlossModelVersion>(LATEST_GLOSS_MODEL)
   const [modelReady, setModelReady] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [lastPrediction, setLastPrediction] = useState<{ label: string; confidence: number } | null>(null)
@@ -64,10 +78,6 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
   const collectedGlossRef = useRef<string[]>([])
   const recordingStartTimeRef = useRef<number>(0)
   const lastRecognizedWordRef = useRef<{ word: string; time: number }>({ word: '', time: 0 })
-  const prevLeftHandRef = useRef<{ x: number; y: number; z: number }[] | null>(null)
-  const prevRightHandRef = useRef<{ x: number; y: number; z: number }[] | null>(null)
-  const prevVelLeftRef = useRef<{ x: number; y: number; z: number }[] | null>(null)
-  const prevVelRightRef = useRef<{ x: number; y: number; z: number }[] | null>(null)
 
   useEffect(() => {
     forcedDegradedRef.current = forcedDegraded
@@ -76,6 +86,11 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
   useEffect(() => {
     isRecordingRef.current = isRecording
   }, [isRecording])
+
+  useEffect(() => {
+    onLiveStatusChange?.({ liveGloss, degraded: degraded || forcedDegraded })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveGloss, degraded, forcedDegraded])
 
   useEffect(() => {
     modelVerRef.current = modelVer
@@ -87,21 +102,7 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
         console.warn('Gagal memuat model:', err)
       })
 
-    triggerToast(
-      `🤖 Beralih ke Model ${modelVer.toUpperCase()} (${
-        modelVer === 'v6'
-          ? 'Supreme Pinnacle Conformer 320D (99.69% Akurat - Puncak Tertinggi Lomba Nasional)'
-          : modelVer === 'v5'
-          ? 'Champion Conformer-BiLSTM 256D (98.75%)'
-          : modelVer === 'v4'
-          ? 'Hand Dynamics 210D (95.0%)'
-          : modelVer === 'v3'
-          ? 'Pose Anchor 160D'
-          : modelVer === 'v2'
-          ? 'Resampled 87.5%'
-          : 'Lama'
-      })`
-    )
+    triggerToast(`Beralih ke ${GLOSS_MODEL_INFO[modelVer].label} — ${GLOSS_MODEL_INFO[modelVer].description}`)
   }, [modelVer])
 
   useEffect(() => {
@@ -199,50 +200,13 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
               if (hasHands && activeModelRef.current) {
                 const activeModel = activeModelRef.current
                 const expectedDim = activeModel.inputs[0]?.shape?.[2] ?? 126
-                const isV6 = expectedDim === 320
-                const isV5 = expectedDim === 256
-                const isV4 = expectedDim === 210
-                const isV3 = expectedDim === 160
+                const isPoseAnchored = expectedDim === 160 // Model v3
                 const rawWrists = extractRawWrists(handResult)
 
-                if (isV6) {
-                  const res6 = landmarksTo320DVector(
-                    handResult,
-                    prevLeftHandRef.current,
-                    prevRightHandRef.current,
-                    prevVelLeftRef.current,
-                    prevVelRightRef.current
-                  )
-                  prevLeftHandRef.current = res6.leftHand
-                  prevRightHandRef.current = res6.rightHand
-                  prevVelLeftRef.current = res6.velLeft
-                  prevVelRightRef.current = res6.velRight
-                  buffer.push(res6.vector, rawWrists)
-                } else if (isV5) {
-                  const res5 = landmarksTo256DVector(
-                    handResult,
-                    prevLeftHandRef.current,
-                    prevRightHandRef.current,
-                    prevVelLeftRef.current,
-                    prevVelRightRef.current
-                  )
-                  prevLeftHandRef.current = res5.leftHand
-                  prevRightHandRef.current = res5.rightHand
-                  prevVelLeftRef.current = res5.velLeft
-                  prevVelRightRef.current = res5.velRight
-                  buffer.push(res5.vector, rawWrists)
-                } else if (isV4) {
-                  const res4 = landmarksTo210DVector(
-                    handResult,
-                    prevLeftHandRef.current,
-                    prevRightHandRef.current
-                  )
-                  prevLeftHandRef.current = res4.leftHand
-                  prevRightHandRef.current = res4.rightHand
-                  buffer.push(res4.vector, rawWrists)
-                } else if (isV3) {
+                if (isPoseAnchored) {
                   buffer.push(landmarksAndPoseToVector(handResult, poseResult), rawWrists)
                 } else {
+                  // Model v1 / v2 (126D, landmark tangan saja)
                   buffer.push(landmarksToVector(handResult), rawWrists)
                 }
 
@@ -273,8 +237,9 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
                         gloss: [word],
                         text: word,
                         createdAt: new Date().toISOString(),
+                        direction: 'sign-to-text',
                       }
-                      setMessages((prev) => [...prev, message])
+                      onAddMessage(message)
                       speak(word)
                     } else {
                       // MODE NORMAL (KALIMAT): Kumpulkan kata unik (bebas ganda) & suarakan
@@ -350,8 +315,9 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
         gloss,
         text: rawText,
         createdAt: new Date().toISOString(),
+        direction: 'sign-to-text',
       }
-      setMessages((prev) => [...prev, message])
+      onAddMessage(message)
       speak(rawText)
       return
     }
@@ -364,8 +330,9 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
         gloss,
         text,
         createdAt: new Date().toISOString(),
+        direction: 'sign-to-text',
       }
-      setMessages((prev) => [...prev, message])
+      onAddMessage(message)
       speak(text)
       void saveHistory(gloss, text)
     } catch {
@@ -376,8 +343,9 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
         gloss,
         text: rawText,
         createdAt: new Date().toISOString(),
+        direction: 'sign-to-text',
       }
-      setMessages((prev) => [...prev, message])
+      onAddMessage(message)
       speak(rawText)
     }
   }
@@ -403,87 +371,26 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Control Panel Mode Switcher & Sakelar Gestur */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
+      <div className="flex flex-wrap items-center justify-between gap-3 card p-4">
         <div className="flex flex-wrap items-center gap-2">
           {/* Pemilih Versi Model AI */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 shadow-inner gap-0.5">
-            <button
-              onClick={() => setModelVer('v6')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all active:scale-95 ${
-                modelVer === 'v6'
-                  ? 'bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 text-white shadow-sm ring-2 ring-emerald-400/50'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-              title="Model v6 Supreme Pinnacle: 320D Conformer-BiLSTM (Akurasi 99.69% - Puncak Tertinggi Lomba Nasional)"
-            >
-              👑 Model v6 (99.69%)
-            </button>
-            <button
-              onClick={() => setModelVer('v5')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all active:scale-95 ${
-                modelVer === 'v5'
-                  ? 'bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-              title="Model v5 Champion: 256D Conformer-BiLSTM (Akurasi 98.75%)"
-            >
-              🏆 Model v5 (98.75%)
-            </button>
-            <button
-              onClick={() => setModelVer('v4')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all active:scale-95 ${
-                modelVer === 'v4'
-                  ? 'bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-              title="Model v4: Hand Dynamics 210D (Akurasi 95.0%)"
-            >
-              🔥 Model v4 (95.0%)
-            </button>
-            <button
-              onClick={() => setModelVer('v3')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all active:scale-95 ${
-                modelVer === 'v3'
-                  ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-              title="Model v3: Pose Body/Face Anchors 160D"
-            >
-              🚀 Model v3 (Pose)
-            </button>
-            <button
-              onClick={() => setModelVer('v2')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all active:scale-95 ${
-                modelVer === 'v2'
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-              title="Model v2: Resampled Spline 126D (Akurasi 87.5%)"
-            >
-              ⚡ Model v2 (87.5%)
-            </button>
-            <button
-              onClick={() => setModelVer('v1')}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition-all active:scale-95 ${
-                modelVer === 'v1'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
-              }`}
-              title="Model v1: Model Legacy"
-            >
-              🏛️ Model v1
-            </button>
+          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 gap-0.5">
+            {GLOSS_MODEL_VERSIONS.map((v) => (
+              <button
+                key={v}
+                onClick={() => setModelVer(v)}
+                className={modelVer === v ? 'tab-pill-active' : 'tab-pill'}
+                title={`${GLOSS_MODEL_INFO[v].label} — ${GLOSS_MODEL_INFO[v].description}`}
+              >
+                {GLOSS_MODEL_INFO[v].label}
+                {v === LATEST_GLOSS_MODEL && <span className="ml-1 text-teal-600">•</span>}
+              </button>
+            ))}
           </div>
 
           {/* Mode Switcher */}
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-              forcedDegraded
-                ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
-            }`}
-          >
-            {forcedDegraded ? '⚡ Mode Degradasi (Deteksi Instan Per Kata)' : '✨ Mode Normal (Penyusun Kalimat LLM)'}
+          <span className={forcedDegraded ? 'badge-warning' : 'badge-active'}>
+            {forcedDegraded ? 'Mode Instan Per Kata' : 'Mode Kalimat (LLM)'}
           </span>
 
           {/* Status Sakelar Detection */}
@@ -503,36 +410,23 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
           {/* Sakelar Mode Degradasi vs Normal */}
           <button
             onClick={() => setForcedDegraded(!forcedDegraded)}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all border shadow-xs active:scale-95 flex items-center gap-1.5 ${
-              forcedDegraded
-                ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white border-emerald-500 shadow-sm hover:brightness-110'
-                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-            }`}
+            className={forcedDegraded ? 'btn-primary text-xs px-3.5 py-1.5' : 'btn-secondary text-xs px-3.5 py-1.5'}
           >
-            {forcedDegraded ? '✨ Aktifkan Mode Kalimat (LLM)' : '⚡ Sakelar: Instan Per Kata'}
+            {forcedDegraded ? 'Aktifkan Mode Kalimat' : 'Sakelar: Instan Per Kata'}
           </button>
 
           {/* Tombol Lihat Dictionary */}
-          <button
-            onClick={onOpenDictionaryModal}
-            className="flex items-center gap-1.5 rounded-xl bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-700 border border-cyan-200 hover:bg-cyan-100 active:scale-95 transition-all"
-          >
-            📖 32 Label Isyarat
+          <button onClick={onOpenDictionaryModal} className="btn-secondary text-xs px-3 py-1.5">
+            32 Label Isyarat
           </button>
 
           {/* Tombol Kontrol Perekaman Isyarat */}
           {!isRecording ? (
-            <button
-              onClick={handleManualStart}
-              className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 active:scale-95 transition-all"
-            >
+            <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-1.5">
               🖐️🖐️ Mulai Mendeteksi
             </button>
           ) : (
-            <button
-              onClick={handleManualStop}
-              className="flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-rose-700 active:scale-95 transition-all"
-            >
+            <button onClick={handleManualStop} className="btn-danger text-xs px-4 py-1.5">
               ✊✊ Selesai & Kirim
             </button>
           )}
@@ -541,7 +435,7 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
 
       {/* Toast Notification Gestur */}
       {gestureToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-slate-950/90 px-6 py-3 text-sm font-bold text-cyan-300 shadow-2xl backdrop-blur border border-cyan-500/40 animate-bounce">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg border border-slate-700">
           {gestureToast}
         </div>
       )}
@@ -562,9 +456,8 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <CameraCapture ref={videoRef} canvasRef={canvasRef} />
+      <div>
+        <CameraCapture ref={videoRef} canvasRef={canvasRef} />
 
           {/* Live Motion Energy & Detection Monitor (Fitur Per-Gerakan) */}
           <div className="mt-2.5 flex flex-col gap-2 rounded-2xl bg-slate-950 p-3 text-xs text-white shadow-md border border-slate-800">
@@ -576,7 +469,7 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
                 </span>
 
                 {currentGesture === 'TWO_OPEN_PALMS' && (
-                  <span className="rounded bg-cyan-900/80 px-2 py-0.5 font-bold text-cyan-300 border border-cyan-700">
+                  <span className="rounded bg-teal-900/80 px-2 py-0.5 font-bold text-teal-300 border border-teal-700">
                     🖐️🖐️ DUA TANGAN TERBUKA
                   </span>
                 )}
@@ -610,7 +503,7 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
                 <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
                   <div
                     className={`h-full transition-all duration-150 ${
-                      !motionInfo.isStill ? 'bg-gradient-to-r from-cyan-500 to-emerald-400' : 'bg-slate-600'
+                      !motionInfo.isStill ? 'bg-teal-500' : 'bg-slate-600'
                     }`}
                     style={{ width: `${Math.min(100, Math.max(5, motionInfo.energy * 2500))}%` }}
                   />
@@ -626,7 +519,7 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
               <span className="text-slate-400">Hasil Isyarat Terakhir:</span>
               {lastPrediction ? (
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-cyan-300">{lastPrediction.label}</span>
+                  <span className="font-bold text-teal-300">{lastPrediction.label}</span>
                   <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300 border border-slate-700">
                     {Math.round(lastPrediction.confidence * 100)}%
                   </span>
@@ -648,7 +541,7 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
           <div className="mt-3 rounded-2xl bg-white p-3.5 shadow-xs border border-slate-100">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-700">💡 32 Kosakata Isyarat Terdaftar:</span>
-              <button onClick={onOpenDictionaryModal} className="text-[11px] font-semibold text-cyan-600 hover:underline">
+              <button onClick={onOpenDictionaryModal} className="text-[11px] font-semibold text-teal-600 hover:underline">
                 Lihat Semua (32) →
               </button>
             </div>
@@ -661,20 +554,12 @@ export function SignToTextMode({ onOpenDictionaryModal }: SignToTextModeProps) {
                   {item.label}
                 </span>
               ))}
-              <span className="rounded-lg bg-cyan-50 px-2 py-0.5 text-[11px] font-bold text-cyan-700 border border-cyan-200">
+              <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[11px] font-bold text-teal-700 border border-teal-200">
                 +16 Lainnya
               </span>
             </div>
           </div>
-        </div>
-
-        <ChatDisplay
-          messages={messages}
-          liveGloss={liveGloss}
-          degraded={degraded || forcedDegraded}
-          onToggleMode={() => setForcedDegraded(false)}
-        />
       </div>
     </div>
   )
-}
+})

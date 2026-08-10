@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { isSpeechRecognitionSupported, listenOnce } from '../components/SpeechOutput'
 import { parseTextToSignTokens, SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
+import type { ConversationMessage } from '../lib/api'
 
 interface TextToSignModeProps {
   onOpenDictionaryModal?: () => void
   initialInput?: string
+  /** Dipanggil setiap kali kalimat baru berhasil di-submit, untuk dicatat di feed obrolan Room bersama. */
+  onAddMessage?: (message: ConversationMessage) => void
 }
 
-export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: TextToSignModeProps) {
+export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAddMessage }: TextToSignModeProps) {
   const [input, setInput] = useState(initialInput)
   const [tokens, setTokens] = useState<ReturnType<typeof parseTextToSignTokens>>([])
 
@@ -47,13 +50,27 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
     })
   }, [validTokens])
 
-  const handleSubmit = useCallback((text: string) => {
-    const parsed = parseTextToSignTokens(text)
-    setTokens(parsed)
-    setActiveValidIndex(0)
-    setIsPlaying(true)
-    setVideoError(null)
-  }, [])
+  const handleSubmit = useCallback(
+    (text: string) => {
+      const parsed = parseTextToSignTokens(text)
+      setTokens(parsed)
+      setActiveValidIndex(0)
+      setIsPlaying(true)
+      setVideoError(null)
+
+      const validCount = parsed.filter((t) => t.videoUrl !== null).length
+      if (validCount > 0 && onAddMessage) {
+        onAddMessage({
+          id: Date.now(),
+          gloss: parsed.map((t) => t.labelName ?? t.originalWord),
+          text,
+          createdAt: new Date().toISOString(),
+          direction: 'text-to-sign',
+        })
+      }
+    },
+    [onAddMessage],
+  )
 
   useEffect(() => {
     if (initialInput) {
@@ -198,11 +215,9 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
   return (
     <div className="flex flex-col gap-5">
       {/* Header Info Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-4 text-white shadow-md border border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 card-dark p-4">
         <div>
-          <h2 className="text-lg font-bold flex items-center gap-2">
-            <span>📹</span> Pemutar Video Isyarat Bahasa (BISINDO)
-          </h2>
+          <h2 className="text-lg font-bold">Teks / Suara → Isyarat</h2>
           <p className="text-xs text-slate-300 mt-0.5">
             Ketik kata atau kalimat untuk menampilkan dan merangkai video peragaan isyarat secara langsung.
           </p>
@@ -210,7 +225,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
 
         <button
           onClick={onOpenDictionaryModal}
-          className="flex items-center gap-1.5 rounded-xl bg-cyan-500/20 px-3.5 py-2 text-xs font-semibold text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/30 transition-all active:scale-95 shadow-xs"
+          className="flex items-center gap-1.5 rounded-xl bg-teal-500/20 px-3.5 py-2 text-xs font-semibold text-teal-300 border border-teal-500/30 hover:bg-teal-500/30 transition-all active:scale-95 shadow-xs"
         >
           📖 Lihat 32 Label Kosakata
         </button>
@@ -220,7 +235,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
       <div className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm border border-slate-100">
         <div className="flex gap-2">
           <input
-            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-cyan-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all"
+            className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:border-teal-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all"
             placeholder="Ketik kalimat (contoh: Mengapa kamu belajar, Terima kasih)..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -253,7 +268,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
                 setInput(prompt)
                 handleSubmit(prompt)
               }}
-              className="rounded-lg bg-slate-100 px-2.5 py-1 font-medium text-slate-600 hover:bg-cyan-50 hover:text-cyan-700 border border-slate-200 transition-all"
+              className="rounded-lg bg-slate-100 px-2.5 py-1 font-medium text-slate-600 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 transition-all"
             >
               {prompt}
             </button>
@@ -292,7 +307,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
                 onClick={() => setIsLoopSentence(!isLoopSentence)}
                 className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all border ${
                   isLoopSentence
-                    ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                    ? 'bg-teal-50 text-teal-700 border-teal-200'
                     : 'bg-slate-100 text-slate-600 border-slate-200'
                 }`}
               >
@@ -341,7 +356,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
                     <p className="mt-1 text-xs text-slate-400">File video tidak dapat dimuat atau format tidak didukung.</p>
                     <button
                       onClick={handleSkipErrorWord}
-                      className="mt-4 rounded-xl bg-cyan-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-cyan-500 active:scale-95 transition-all"
+                      className="mt-4 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all"
                     >
                       Lompati Kata Ini ➔
                     </button>
@@ -350,8 +365,8 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
 
                 {/* Subtitle Badge di Atas Video */}
                 <div className="absolute top-3 left-3 z-20 flex items-center gap-2 rounded-xl bg-slate-950/80 px-3.5 py-1.5 text-xs font-bold text-white shadow-md backdrop-blur border border-slate-700">
-                  <span className={`h-2 w-2 rounded-full ${isPlaying ? 'bg-cyan-400 animate-pulse' : 'bg-amber-400'}`} />
-                  <span className="text-cyan-400">Kata #{activeValidIndex + 1}/{validTokens.length}:</span>
+                  <span className={`h-2 w-2 rounded-full ${isPlaying ? 'bg-teal-400 animate-pulse' : 'bg-amber-400'}`} />
+                  <span className="text-teal-400">Kata #{activeValidIndex + 1}/{validTokens.length}:</span>
                   <span className="text-white capitalize">{activeToken.labelName ?? activeToken.originalWord}</span>
                 </div>
               </div>
@@ -400,9 +415,9 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
                           }}
                           className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all border ${
                             isActiveWord
-                              ? 'bg-cyan-600 text-white border-cyan-600 shadow-md ring-2 ring-cyan-500/30 scale-105'
+                              ? 'bg-teal-600 text-white border-teal-600 shadow-md ring-2 ring-teal-500/30 scale-105'
                               : isAvailable
-                              ? 'bg-white text-slate-800 border-slate-200 hover:border-cyan-400 hover:bg-cyan-50'
+                              ? 'bg-white text-slate-800 border-slate-200 hover:border-teal-400 hover:bg-teal-50'
                               : 'bg-slate-200/60 text-slate-400 border-transparent cursor-not-allowed'
                           }`}
                         >
@@ -446,7 +461,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
                     key={`card-${token.originalWord}-${i}`}
                     className={`flex items-center justify-between rounded-xl border p-2.5 text-xs transition-all ${
                       isActive
-                        ? 'border-cyan-500 bg-cyan-50 text-cyan-900 font-bold shadow-xs'
+                        ? 'border-teal-500 bg-teal-50 text-teal-900 font-bold shadow-xs'
                         : 'border-slate-200 bg-slate-50 text-slate-700'
                     }`}
                   >
@@ -487,7 +502,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
           </div>
           <button
             onClick={onOpenDictionaryModal}
-            className="text-xs font-bold text-cyan-600 hover:text-cyan-700 hover:underline"
+            className="text-xs font-bold text-teal-600 hover:text-teal-700 hover:underline"
           >
             Lihat Detail Modal →
           </button>
@@ -501,7 +516,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '' }: Tex
                 setInput(item.label)
                 handleSubmit(item.label)
               }}
-              className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 border border-slate-200 hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-800 transition-all active:scale-95 shadow-2xs"
+              className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 border border-slate-200 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-800 transition-all active:scale-95 shadow-2xs"
             >
               <span>🎥</span>
               <span>{item.label}</span>

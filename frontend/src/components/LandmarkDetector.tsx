@@ -138,9 +138,9 @@ export function drawHandAndPoseLandmarks(
   if (poseResult && poseResult.landmarks && poseResult.landmarks.length > 0) {
     const pose = poseResult.landmarks[0]
 
-    // A. Gambar Garis Wajah & Kepala dalam warna Magenta/Pink Neon (#ec4899)
-    ctx.strokeStyle = '#ec4899'
-    ctx.lineWidth = 2.5
+    // A. Gambar Garis Wajah & Kepala
+    ctx.strokeStyle = '#94a3b8'
+    ctx.lineWidth = 2
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
 
@@ -161,7 +161,7 @@ export function drawHandAndPoseLandmarks(
       if (p && (p.visibility ?? 1) > 0.45) {
         ctx.beginPath()
         ctx.arc(p.x * width, p.y * height, idx === 0 ? 5 : 4, 0, 2 * Math.PI)
-        ctx.fillStyle = idx === 0 ? '#f43f5e' : '#fb7185'
+        ctx.fillStyle = '#64748b'
         ctx.fill()
         ctx.strokeStyle = '#ffffff'
         ctx.lineWidth = 1.5
@@ -169,9 +169,9 @@ export function drawHandAndPoseLandmarks(
       }
     }
 
-    // C. Gambar Garis Lengan & Bahu dalam warna Violet Neon (#a855f7)
-    ctx.strokeStyle = '#a855f7'
-    ctx.lineWidth = 4
+    // C. Gambar Garis Lengan & Bahu
+    ctx.strokeStyle = '#0d9488'
+    ctx.lineWidth = 3
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
 
@@ -192,21 +192,21 @@ export function drawHandAndPoseLandmarks(
       if (p && (p.visibility ?? 1) > 0.45) {
         ctx.beginPath()
         ctx.arc(p.x * width, p.y * height, 6, 0, 2 * Math.PI)
-        ctx.fillStyle = '#c084fc'
+        ctx.fillStyle = '#14b8a6'
         ctx.fill()
-        ctx.strokeStyle = '#7e22ce'
+        ctx.strokeStyle = '#0f766e'
         ctx.lineWidth = 2
         ctx.stroke()
       }
     }
   }
 
-  // 2. Gambar tracking telapak & jari tangan (Hand Landmarks) dalam warna Cyan & Amber Neon
+  // 2. Gambar tracking telapak & jari tangan (Hand Landmarks)
   const hands = handResult.landmarks ?? []
   for (const hand of hands) {
     if (!hand || hand.length === 0) continue
 
-    ctx.strokeStyle = '#06b6d4' // Cyan neon
+    ctx.strokeStyle = '#0d9488'
     ctx.lineWidth = 3
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
@@ -235,7 +235,7 @@ export function drawHandAndPoseLandmarks(
       ctx.fillStyle = isFingertip ? '#f59e0b' : '#ffffff'
       ctx.fill()
 
-      ctx.strokeStyle = isFingertip ? '#d97706' : '#0891b2'
+      ctx.strokeStyle = isFingertip ? '#b45309' : '#0f766e'
       ctx.lineWidth = 2
       ctx.stroke()
     }

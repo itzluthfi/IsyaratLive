@@ -1,0 +1,58 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?wajib diisi di .env}
+      MYSQL_DATABASE: isyaratlive
+      MYSQL_USER: isyaratlive
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?wajib diisi di .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: mysql
+      DB_USER: isyaratlive
+      DB_PASSWORD: ${MYSQL_PASSWORD:?wajib diisi di .env}
+      DB_NAME: isyaratlive
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?wajib diisi di .env, mis. isyaratlive.contoh.com}
+      ACME_EMAIL: ${ACME_EMAIL:?wajib diisi di .env, untuk notifikasi sertifikat Let's Encrypt}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  mysql-data:
+  caddy-data:
+  caddy-config:

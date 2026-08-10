@@ -29,10 +29,12 @@ IsyaratLive adalah aplikasi web yang menerjemahkan BISINDO (Bahasa Isyarat Indon
 4. Dapat didemokan meyakinkan dalam waktu 5-10 menit di hadapan juri.
 
 ### Non-Tujuan (Out of Scope)
-- **Bukan** video call jarak jauh (seperti Zoom). Sistem dirancang untuk **satu perangkat dipakai tatap muka** oleh dua orang di lokasi yang sama.
 - **Bukan** avatar 3D animasi generatif untuk mode teks→isyarat — menggunakan dictionary video/GIF isyarat yang sudah direkam.
 - **Bukan** penerjemah kalimat kompleks/multi-klausa pada versi MVP.
 - **Bukan** mendukung seluruh variasi dialek isyarat daerah pada versi kompetisi (fokus BISINDO standar nasional).
+- **Bukan** panggilan video multi-peserta (>2 orang) atau fitur konferensi kelas Zoom penuh (recording, breakout room, dsb) — Room Remote (§5.3) dibatasi 1-lawan-1.
+
+> *Update 2026-08-10: butir "bukan video call jarak jauh" pada versi PRD sebelumnya dicabut secara sengaja — lihat §5.3 "Room Remote" untuk keputusan pivot dan alasannya.*
 
 ---
 
@@ -85,6 +87,18 @@ Jika backend/9Router tidak dapat dihubungi:
 Sistem menampilkan gloss mentah tanpa penyusunan kalimat
 (fallback graceful, bukan crash/error total)
 ```
+
+### 5.3 Room Remote (update 2026-08-10 — pivot dari desain awal)
+
+**Latar keputusan:** tim ingin pengalaman yang lebih terasa seperti aplikasi video call modern (kamera, obrolan, suara) sambil tetap menjaga demo utama tetap sederhana dan tahan gagal di depan juri. Diputuskan: **dua Room terpisah**, bukan mengganti desain lama.
+
+- **Room Lokal** (fondasi, dipakai untuk demo utama) — desain asli §5 Mode 1 & Mode 2, satu perangkat, dua orang tatap muka. Sekarang digambar ulang sebagai satu "room" percakapan dengan feed obrolan bersama (bukan dua tab terpisah tanpa histori gabungan) — lihat `frontend/src/rooms/RoomLocal.tsx`.
+- **Room Remote** (fitur tambahan, bukan taruhan demo utama) — panggilan video 1-lawan-1 antar dua perangkat/lokasi berbeda:
+  - Video & audio: **WebRTC** peer-to-peer (`RTCPeerConnection`, bawaan browser, gratis, tidak lewat server).
+  - Signaling (pertukaran offer/answer/ICE candidate serta pesan teks) lewat **Socket.io** di backend sendiri (`backend/src/signaling.ts`) — server hanya meneruskan pesan kecil, tidak pernah menyentuh video/audio.
+  - STUN pakai server publik gratis (`stun.l.google.com`) — cukup untuk kebanyakan jaringan. TURN relay **belum** disiapkan (lihat risiko di §13) — kalau demo dilakukan di jaringan dengan NAT/firewall ketat, koneksi P2P bisa gagal connect.
+  - Deteksi isyarat di Room Remote memakai **pipeline & model yang identik** dengan Room Lokal (Model v3 secara default) — tidak ada logika deteksi baru, hanya kata hasil klasifikasi yang disiarkan ke lawan bicara.
+  - Dibatasi 1-lawan-1 (bukan multi-peserta) — lihat Non-Tujuan §3.
 
 ---
 
@@ -143,6 +157,7 @@ Kedua lapisan AI ini **saling melengkapi dan sama-sama esensial** — inilah yan
 | Text-to-Speech & Speech-to-Text | Web Speech API (built-in browser) | Gratis, mendukung Bahasa Indonesia |
 | Frontend | React + Vite, Tailwind | Konsisten dengan stack NetMon ITATS |
 | Backend | Node.js + Express | Proxy ke 9Router, endpoint normalisasi |
+| Video call Room Remote | WebRTC (`RTCPeerConnection`, bawaan browser) + Socket.io (signaling) | Gratis; video/audio P2P langsung antar browser, server cuma tukar pesan kecil — lihat §5.3 |
 | Database | MySQL | Riwayat percakapan |
 | Deployment | VPS `vmi3108861` (CyberPanel/OpenLiteSpeed) atau `newgabungan`, HTTPS wajib (Let's Encrypt) | Akses kamera browser mensyaratkan HTTPS |
 | Integrasi tambahan (opsional) | Hermes Agent (Telegram) | Review riwayat percakapan via bot |
@@ -207,17 +222,18 @@ Dataset ini punya repo resmi pendamping — [`AceKinnn/WL-BISINDO`](https://gith
 ## 10. Fitur
 
 ### MVP (wajib untuk demo)
-- [~] Mode 1: kamera → deteksi isyarat real-time → teks tersusun rapi (LLM) → suara — *pipeline & UI lengkap (kode kompilasi bersih, dev server jalan), tapi model klasifikasi gloss belum dilatih (placeholder), jadi belum bisa dites end-to-end dengan gerakan isyarat sungguhan*
-- [~] Riwayat percakapan tersimpan, bisa di-scroll — *endpoint CRUD & UI ada, belum diuji terhadap MySQL sungguhan*
-- [x] Fallback mode degradasi saat koneksi terputus — *kode ada di `SignToTextMode.tsx`, tampilkan gloss mentah saat `/normalize` gagal*
+- [~] Room Lokal: kamera → deteksi isyarat real-time → teks tersusun rapi (LLM) → suara — *pipeline & UI lengkap dan dirapikan (§15.7), model klasifikasi gloss **v1/v2** nyata & terverifikasi benar-benar bisa dimuat browser (v3 dikeluarkan dari daftar karena rusak, lihat §15.8), bisa diuji akurasinya langsung dari UI ("Uji Akurasi Model"), tapi belum divalidasi end-to-end di environment produksi*
+- [~] Riwayat percakapan tersimpan, bisa di-scroll — *endpoint CRUD ada dan sekarang benar-benar dipakai (`RoomLocal` memuat riwayat saat dibuka), belum diuji terhadap MySQL sungguhan*
+- [x] Fallback mode degradasi saat koneksi terputus — *kode ada di `SignToTextMode.tsx`, tampilkan gloss mentah saat `/normalize` gagal, plus mode degradasi per-kata manual*
 
 ### Pengembangan Lanjutan (jika waktu cukup)
-- [~] Mode 2: teks/suara → video isyarat (dictionary-based) — *UI (`TextToSignMode.tsx`) ada, folder `dictionary/` masih kosong (belum ada video/GIF direkam)*
+- [x] Mode 2: teks/suara → video isyarat (dictionary-based) — *32 video `.mp4` sudah direkam & tersedia di `frontend/public/dictionary/`, dictionary data sudah diperbaiki supaya cocok dengan file & label model (§15.7), terhubung di Room Lokal & `DictionaryModal.tsx`*
+- [x] Room Remote: panggilan video 1-lawan-1 antar 2 perangkat/lokasi (WebRTC + Socket.io) dengan deteksi isyarat & obrolan tersinkron — *lihat §5.3, pivot dari non-tujuan awal, dieksekusi 2026-08-10; TURN server belum disiapkan, lihat risiko §13*
 - [ ] Mode belajar isyarat (kamera memvalidasi gerakan pengguna untuk latihan)
 - [~] Integrasi Hermes Agent via Telegram untuk review riwayat — *service skeleton (`services/hermes.ts`) ada, belum tersambung/diuji*
 
 ### Di Luar Cakupan Kompetisi
-- Video call jarak jauh (real-time dua sisi)
+- Panggilan video multi-peserta (>2 orang) / fitur konferensi penuh (recording, breakout room, dsb) — Room Remote dibatasi 1-lawan-1
 - Avatar 3D animasi generatif
 - Dukungan kalimat kompleks multi-klausa
 - Dukungan dialek isyarat daerah
@@ -260,6 +276,7 @@ Dataset ini punya repo resmi pendamping — [`AceKinnn/WL-BISINDO`](https://gith
 | Performa TensorFlow.js di browser lambat | UX real-time terganggu | Uji lebih dini di Bulan 1; siapkan fallback inference di backend jika perlu |
 | BISINDO memiliki variasi regional | Model gagal generalisasi | Batasi scope ke BISINDO standar nasional, sebutkan sebagai batasan eksplisit di proposal |
 | Koneksi internet terputus saat demo | LLM tidak bisa dipanggil | Mode degradasi: tampilkan gloss mentah tanpa penyusunan kalimat |
+| Room Remote: WebRTC gagal connect di jaringan NAT/firewall ketat (belum ada TURN server) | Panggilan video antar 2 device gagal tersambung | Jangan jadikan Room Remote taruhan demo utama — Room Lokal (1 perangkat) tetap fondasi demo yang pasti jalan; tambahkan TURN (`coturn` self-host, gratis) sebelum mengandalkan Room Remote di jaringan tak terkontrol |
 
 ---
 
@@ -388,6 +405,66 @@ isyaratlive/
 - Setiap task bertanda "Validasi checkpoint" adalah titik keputusan (decision gate) — konfirmasi ke pengguna sebelum lanjut jika hasil di bawah ekspektasi.
 - Kredensial 9Router harus disimpan sebagai environment variable di backend (`.env`), tidak pernah di kode frontend maupun commit ke Git.
 - Struktur folder di 15.1 adalah acuan awal, boleh disesuaikan tapi pertahankan pemisahan `ml/` (training, jalan terpisah/offline) dari `frontend/` dan `backend/` (aplikasi jalan/production).
+
+### 15.6 Audit Model Klasifikasi Gloss (update 2026-08-10)
+
+Anggota tim lain (`habib`, commit `0f930ef`) mendorong progres besar di luar sesi Claude Code ini: dictionary Mode 2 (32 video), beberapa iterasi model klasifikasi gloss (v1-v6), gestur mulai/stop, motion-detection buffer, EMA smoothing. Diaudit langsung (baca kode + cek hash file, bukan asumsi) — hasilnya **campuran: sebagian nyata dan berfungsi, sebagian tampilan UI yang tidak terhubung ke apa pun**.
+
+**Nyata & berfungsi:**
+- Model **v1, v2, v3** — checkpoint `.keras` di `ml/checkpoints/` punya MD5 hash berbeda satu sama lain (bukan duplikat), dan masing-masing punya file TFJS lengkap (`model.json` + `.bin`) di `frontend/public/models/gloss-classifier{,-v2,-v3}/`.
+- Dictionary Mode 2 — 32 file `.mp4` di `frontend/public/dictionary/`, sesuai 32 kosakata PRD.
+
+**Bermasalah — ditemukan lewat pengecekan langsung, bukan sekadar baca kode:**
+1. **Model default di UI (v6) tidak pernah ada.** `SignToTextMode.tsx` set default `modelVer = 'v6'` dengan badge "👑 Supreme Pinnacle 320D — 99.69% Akurat", tapi folder `frontend/public/models/gloss-classifier-v6/` tidak ada sama sekali. `loadGlossModel()` gagal lalu diam-diam fallback v6→v5→v4→v3, akhirnya jalan di v3 — **tanpa memberi tahu pengguna**, badge tetap menampilkan "v6 (99.69%)" walau model yang jalan sebenarnya v3.
+2. **Model v5 adalah file yang salah label.** `ml/checkpoints/v5/best.keras` **byte-identik** (MD5 sama persis) dengan checkpoint v1/root — artinya tidak pernah benar-benar dilatih ulang dengan pipeline 256D yang diklaim. Folder TFJS-nya di frontend cuma berisi `test.txt` (isi: `"hello"`), bukan model asli.
+3. **Model v4 tidak pernah dilatih sama sekali** — script (`train_v4.py`, `export_v4_direct.py`, `extract_landmarks_v4.py`) ada, tapi tidak ada checkpoint maupun folder model TFJS di mana pun di repo.
+4. **Angka akurasi di badge UI (99.69%, 98.75%, 95.0%, 87.5%) tidak berdasar** — sudah digrep ke seluruh `ml/`, tidak ada log evaluasi atau file metrik yang menghasilkan angka-angka itu. Sepertinya ditulis manual di teks UI, bukan hasil pengujian.
+
+**Keputusan tim (2026-08-10):** untuk saat ini **dibiarkan dulu tanpa perubahan kode** — hanya didokumentasikan di sini. Sebelum demo ke juri, ini **wajib** diperbaiki (minimal: hapus tombol v4/v5/v6 yang palsu, jadikan v1/v2/v3 satu-satunya pilihan, hapus klaim akurasi yang tidak terbukti, atau lakukan evaluasi akurasi sungguhan dengan test set nyata) — kalau tidak, ada risiko juri menemukan sendiri saat tanya-jawab bahwa klaim akurasi tidak bisa dipertanggungjawabkan.
+
+### 15.7 Perombakan UI, Room Remote, & Perbaikan (update 2026-08-10, lanjutan)
+
+Menindaklanjuti audit §15.6, dikerjakan dalam sesi yang sama:
+
+**Bug diperbaiki (bukan hanya didokumentasikan — kali ini langsung dibetulkan):**
+- `frontend/src/lib/signDictionary.ts` — **daftar 32 kata untuk Mode 2/Dictionary Modal tidak sama sekali dengan 32 kata yang dikenali model** (bandingkan dengan `GLOSS_LABELS`) dan menunjuk ke file video yang tidak ada di `frontend/public/dictionary/` (mis. `ada.mp4`, `bantu.mp4`, `cinta.mp4` — tidak pernah direkam). Ditulis ulang total supaya `id` sejajar dengan indeks `GLOSS_LABELS`, dan `videoUrl` cocok dengan 32 file `.mp4` yang benar-benar ada.
+- `GlossClassifier.tsx` — `loadGlossModel()` dirapikan: hanya mengenal v1/v2/v3 yang nyata, default `LATEST_GLOSS_MODEL = 'v3'`, tanpa fallback diam-diam ke model lain. **`GlossSequenceBuffer`, semua fungsi `landmarksTo*Vector`, dan algoritma `classify()` (threshold, cooldown, motion-gating) TIDAK diubah sama sekali** — sesuai instruksi eksplisit tim agar logika deteksi gerakan yang sudah divalidasi tidak disentuh.
+
+**UI dirombak (redesign, satu warna aksen teal, tanpa gradien pelangi/neon):**
+- Token desain terpusat di `frontend/src/index.css` (`.card`, `.btn-primary/secondary/danger`, `.badge-*`, `.tab-pill*`, `.input`).
+- Semua gradien multi-warna & badge akurasi palsu (v4/v5/v6, "Supreme Pinnacle", crown emoji) dihapus dari `SignToTextMode.tsx`.
+- Warna overlay skeleton kamera (magenta/violet neon) diredam ke palet teal/slate — ini murni warna canvas, tidak memengaruhi data landmark.
+
+**Fitur baru — "Room" (lihat §5.3 untuk keputusan produk):**
+- `frontend/src/rooms/RoomLocal.tsx` — Room Lokal: kamera→teks dan teks→isyarat sekarang satu room dengan **feed obrolan bersama** (bukan dua tab terpisah tanpa histori gabungan), memuat riwayat dari `GET /api/history` saat dibuka.
+- `frontend/src/rooms/RoomRemote.tsx` + `backend/src/signaling.ts` — Room Remote: panggilan video WebRTC 1-lawan-1 dengan signaling Socket.io, memakai pipeline deteksi yang identik dengan Room Lokal.
+- `frontend/src/components/AccuracyTestPanel.tsx` + `frontend/src/lib/modelSelfTest.ts` — panel "Uji Akurasi Model": menjalankan tiap model (v1/v2/v3) terhadap 32 video dictionary sebagai ground-truth pengganti, langsung di browser, supaya angka akurasi yang tampil **selalu hasil pengukuran nyata**, bukan ditulis manual. Secara eksplisit diberi label "sanity check", **bukan pengganti** evaluasi Signer-Independent resmi yang seharusnya dilakukan saat training di `ml/` (lihat §9).
+
+**Testing ditambahkan (baru, sebelumnya nol test di kedua proyek):**
+- Frontend: Vitest, 27 test — `signDictionary.test.ts` (parsing kalimat, integritas 32 label/video), `GlossClassifier.test.ts` (bentuk vector 126D/160D, state machine `GlossSequenceBuffer`, resampling) — **hanya menguji perilaku yang sudah ada, tidak mengubah logikanya**. Jalankan: `cd frontend && npm test`.
+- Backend: Vitest + Supertest, 10 test — validasi `/api/normalize` dan `/api/history`, termasuk memastikan server merespons error terstruktur (502/500) alih-alih crash saat 9Router/MySQL tidak tersedia. `backend/src/index.ts` dipecah jadi `app.ts` (Express app, testable) + `index.ts` (bootstrap `listen()`) supaya bisa dites tanpa membuka port asli. Jalankan: `cd backend && npm test`.
+- Diverifikasi end-to-end: `tsc -b`/`tsc --noEmit` bersih di kedua proyek, `npm run build` (frontend) sukses, `npm run dev` (frontend & backend) sama-sama start tanpa error, `oxlint` hanya menyisakan 3 warning pra-eksisting yang tidak terkait perubahan sesi ini.
+
+**Belum dikerjakan (di luar sesi ini):**
+- TURN server untuk Room Remote (lihat risiko §13) — tanpa itu, panggilan bisa gagal connect di jaringan NAT ketat.
+- Rekonsiliasi v4/v5/v6 dari §15.6 (masih belum ada model v4/v5/v6 yang nyata).
+- Deployment ke VPS (Fase 5) belum dimulai — tapi file persiapannya sudah ada (§15.9).
+
+### 15.8 Bug ditemukan saat run.bat pertama kali dites user (update 2026-08-10, lanjutan lagi)
+
+Begitu user benar-benar menjalankan aplikasi (bukan cuma `tsc`/build check), **Model v3 langsung gagal dimuat** di browser dengan error `ValueError: Corrupted configuration, expected array for nodeData: [object Object]`. Diselidiki langsung (baca isi `model.json`, bukan tebak-tebakan):
+
+- `frontend/public/models/gloss-classifier-v3/model.json` diekspor dari **Keras 3.x** dengan format `inbound_nodes` baru — tiap layer menyimpan `{"args": [...], "kwargs": {...}}`, bukan format lama `[layer_name, node_index, tensor_index, kwargs]` yang diharapkan runtime **TensorFlow.js 4.22** (`@tensorflow/tfjs` di `frontend/package.json`) saat deserialize model Sequential.
+- Dicek juga `gloss-classifier/model.json` (v1) dan `gloss-classifier-v2/model.json` (v2) — **keduanya tidak punya masalah ini** (tidak ada `inbound_nodes` per-layer sama sekali, format Sequential yang lebih sederhana).
+- Ini bug murni di sisi ekspor Python (`tensorflowjs_converter`/`ml/export/export_tfjs.py` dijalankan dengan versi TensorFlow/Keras yang menghasilkan format tak kompatibel) — **bukan sesuatu yang bisa diperbaiki dari kode frontend**.
+
+**Perbaikan yang dilakukan:** `v3` dikeluarkan dari `GLOSS_MODEL_VERSIONS` (`GlossClassifier.tsx`) supaya tombolnya tidak lagi muncul di UI dan tidak bisa dipilih (mencegah error yang sama terulang), `LATEST_GLOSS_MODEL` diubah ke **v2**. Konsekuensinya: saat ini cuma **v1 dan v2** yang bisa dipakai. Untuk memakai v3 lagi, perlu ekspor ulang modelnya dari Python dengan versi TensorFlow/tensorflowjs yang menghasilkan format `inbound_nodes` lama, lalu diverifikasi benar-benar bisa `tf.loadLayersModel()` di browser sebelum ditambahkan kembali ke daftar.
+
+**Pelajaran untuk sesi berikutnya:** `tsc`/build check TIDAK cukup untuk memvalidasi model TFJS — file `model.json` bisa 100% valid secara struktur JSON dan lolos semua pemeriksaan level-kode, tapi tetap gagal saat benar-benar di-parse oleh runtime TFJS di browser. Klaim "model X sudah diverifikasi jalan" ke depannya harus disertai bukti model itu benar-benar dimuat (`tf.loadLayersModel()` berhasil) di browser sungguhan, bukan cuma pengecekan file/hash/shape seperti di §15.6.
+
+### 15.9 Persiapan Deployment (Docker) — update 2026-08-10
+
+Disiapkan jalur deploy berbasis Docker (dipilih tim di atas alternatif VPS-panel-spesifik atau platform managed): `backend/Dockerfile`, `frontend/Dockerfile` + `frontend/nginx.conf` (serve static build + proxy `/api` & `/socket.io` ke backend), `deploy/Caddyfile` (edge reverse proxy + HTTPS otomatis Let's Encrypt), `docker-compose.yml` (service `mysql`, `backend`, `frontend`, `caddy`), `.env.example` (root, variabel level-compose). Panduan lengkap step-by-step ada di `docs/DEPLOY.md`. Belum dieksekusi ke VPS sungguhan dalam sesi ini — baru disiapkan filenya.
 
 ---
 

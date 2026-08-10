@@ -1,46 +1,54 @@
+export type SignCategory = 'Pertanyaan' | 'Waktu' | 'Warna' | 'Sosial' | 'Aktivitas'
+
 export interface SignLabelInfo {
   id: number
   label: string
   english: string
-  category: 'Pertanyaan' | 'Warna' | 'Waktu' | 'Sosial' | 'Aktivitas'
+  category: SignCategory
   videoUrl: string
   cleanKey: string
   description: string
 }
 
+/**
+ * 32 kosakata resmi IsyaratLive (PRD bagian 9). `id` di sini SENGAJA sama
+ * dengan urutan indeks `GLOSS_LABELS` di components/GlossClassifier.tsx —
+ * jangan ubah urutan salah satu tanpa menyamakan keduanya, dan jangan ubah
+ * tanpa juga menyamakan `LABELS` di ml/training/train.py.
+ */
 export const SIGN_DICTIONARY_DATA: SignLabelInfo[] = [
-  { id: 0, label: 'ADA', english: 'Exist / Have', category: 'Aktivitas', videoUrl: '/dictionary/ada.mp4', cleanKey: 'ada', description: 'Menunjukkan keberadaan atau ketersediaan sesuatu.' },
-  { id: 1, label: 'AKU', english: 'I / Me', category: 'Sosial', videoUrl: '/dictionary/aku.mp4', cleanKey: 'aku', description: 'Kata ganti orang pertama (Aku/Saya).' },
-  { id: 2, label: 'APA', english: 'What', category: 'Pertanyaan', videoUrl: '/dictionary/apa.mp4', cleanKey: 'apa', description: 'Menanyakan sesuatu hal atau kejadian.' },
-  { id: 3, label: 'BAGAIMANA', english: 'How', category: 'Pertanyaan', videoUrl: '/dictionary/bagaimana.mp4', cleanKey: 'bagaimana', description: 'Menanyakan cara, keadaan, atau proses.' },
-  { id: 4, label: 'BAIK', english: 'Good / Fine', category: 'Sosial', videoUrl: '/dictionary/baik.mp4', cleanKey: 'baik', description: 'Ungkapan kabar baik atau rasa terima kasih.' },
-  { id: 5, label: 'BISA', english: 'Can / Able', category: 'Aktivitas', videoUrl: '/dictionary/bisa.mp4', cleanKey: 'bisa', description: 'Menunjukkan kemampuan atau sanggup.' },
-  { id: 6, label: 'BANTU', english: 'Help / Assist', category: 'Aktivitas', videoUrl: '/dictionary/bantu.mp4', cleanKey: 'bantu', description: 'Meminta atau memberikan pertolongan.' },
-  { id: 7, label: 'BELAJAR', english: 'Study / Learn', category: 'Aktivitas', videoUrl: '/dictionary/belajar.mp4', cleanKey: 'belajar', description: 'Proses menuntut ilmu dan latihan.' },
-  { id: 8, label: 'BERAPA', english: 'How much / How many', category: 'Pertanyaan', videoUrl: '/dictionary/berapa.mp4', cleanKey: 'berapa', description: 'Menanyakan jumlah, harga, atau kuantitas.' },
-  { id: 9, label: 'BICARA', english: 'Speak / Talk', category: 'Sosial', videoUrl: '/dictionary/bicara.mp4', cleanKey: 'bicara', description: 'Berkomunikasi kata-kata atau berdiskusi.' },
-  { id: 10, label: 'CINTA', english: 'Love / Affection', category: 'Sosial', videoUrl: '/dictionary/cinta.mp4', cleanKey: 'cinta', description: 'Perasaan kasih sayang mendalam.' },
-  { id: 11, label: 'DI', english: 'At / In', category: 'Pertanyaan', videoUrl: '/dictionary/di.mp4', cleanKey: 'di', description: 'Kata depan penunjuk lokasi atau tempat.' },
-  { id: 12, label: 'HARI', english: 'Day', category: 'Waktu', videoUrl: '/dictionary/hari.mp4', cleanKey: 'hari', description: 'Satuan waktu siklus harian.' },
-  { id: 13, label: 'INI', english: 'This', category: 'Sosial', videoUrl: '/dictionary/ini.mp4', cleanKey: 'ini', description: 'Menunjuk objek atau situasi yang dekat.' },
-  { id: 14, label: 'INGIN', english: 'Want / Desire', category: 'Aktivitas', videoUrl: '/dictionary/ingin.mp4', cleanKey: 'ingin', description: 'Keinginan atau hasrat melakukan sesuatu.' },
-  { id: 15, label: 'ISYARAT', english: 'Sign Language / Deaf Sign', category: 'Sosial', videoUrl: '/dictionary/isyarat.mp4', cleanKey: 'isyarat', description: 'Komunikasi Isyarat BISINDO / Teman Tuli.' },
-  { id: 16, label: 'KAMU', english: 'You', category: 'Sosial', videoUrl: '/dictionary/kamu.mp4', cleanKey: 'kamu', description: 'Kata ganti orang kedua tunggal.' },
-  { id: 17, label: 'KERJA', english: 'Work / Job', category: 'Aktivitas', videoUrl: '/dictionary/kerja.mp4', cleanKey: 'kerja', description: 'Aktivitas pekerjaan atau profesi.' },
-  { id: 18, label: 'MAAF', english: 'Sorry', category: 'Sosial', videoUrl: '/dictionary/maaf.mp4', cleanKey: 'maaf', description: 'Ungkapan permohonan maaf.' },
-  { id: 19, label: 'MAKAN', english: 'Eat', category: 'Aktivitas', videoUrl: '/dictionary/makan.mp4', cleanKey: 'makan', description: 'Aktivitas mengonsumsi makanan.' },
-  { id: 20, label: 'MANA', english: 'Where', category: 'Pertanyaan', videoUrl: '/dictionary/mana.mp4', cleanKey: 'mana', description: 'Menanyakan tempat atau pilihan.' },
-  { id: 21, label: 'MINUM', english: 'Drink', category: 'Aktivitas', videoUrl: '/dictionary/minum.mp4', cleanKey: 'minum', description: 'Aktivitas mengonsumsi cairan/minuman.' },
-  { id: 22, label: 'NAMA', english: 'Name', category: 'Sosial', videoUrl: '/dictionary/nama.mp4', cleanKey: 'nama', description: 'Sebutan atau identitas diri.' },
-  { id: 23, label: 'PANGGIL', english: 'Call / Summon', category: 'Aktivitas', videoUrl: '/dictionary/panggil.mp4', cleanKey: 'panggil', description: 'Memanggil atau menyapa seseorang.' },
-  { id: 24, label: 'SAMA', english: 'Same / With', category: 'Sosial', videoUrl: '/dictionary/sama.mp4', cleanKey: 'sama', description: 'Kesamaan atau bersama-sama.' },
-  { id: 25, label: 'SANGAT', english: 'Very / So much', category: 'Sosial', videoUrl: '/dictionary/sangat.mp4', cleanKey: 'sangat', description: 'Menunjukkan tingkat keteringatan tinggi.' },
-  { id: 26, label: 'SAYA', english: 'I / Myself', category: 'Sosial', videoUrl: '/dictionary/saya.mp4', cleanKey: 'saya', description: 'Kata ganti orang pertama sopan.' },
-  { id: 27, label: 'SELAMAT', english: 'Congratulations / Safe', category: 'Sosial', videoUrl: '/dictionary/selamat.mp4', cleanKey: 'selamat', description: 'Ucapan selamat atau aman.' },
-  { id: 28, label: 'TANYA', english: 'Ask / Question', category: 'Pertanyaan', videoUrl: '/dictionary/tanya.mp4', cleanKey: 'tanya', description: 'Mengajukan pertanyaan atau bertanya.' },
-  { id: 29, label: 'TEMAN', english: 'Friend / Companion', category: 'Sosial', videoUrl: '/dictionary/teman.mp4', cleanKey: 'teman', description: 'Kawan atau sahabat dekat.' },
-  { id: 30, label: 'TERIMA_KASIH', english: 'Thank You', category: 'Sosial', videoUrl: '/dictionary/terima_kasih.mp4', cleanKey: 'terima_kasih', description: 'Ungkapan rasa syukur dan terima kasih.' },
-  { id: 31, label: 'TIDAK', english: 'No / Not', category: 'Sosial', videoUrl: '/dictionary/tidak.mp4', cleanKey: 'tidak', description: 'Menyatakan penolakan atau penyangkalan.' },
+  { id: 0, label: 'Air', english: 'Water', category: 'Aktivitas', videoUrl: '/dictionary/air.mp4', cleanKey: 'air', description: 'Menyebut air sebagai benda atau kebutuhan minum.' },
+  { id: 1, label: 'Belajar', english: 'Learn', category: 'Aktivitas', videoUrl: '/dictionary/belajar.mp4', cleanKey: 'belajar', description: 'Proses menuntut ilmu atau berlatih sesuatu.' },
+  { id: 2, label: 'Cari', english: 'Search', category: 'Aktivitas', videoUrl: '/dictionary/cari.mp4', cleanKey: 'cari', description: 'Mencari atau menemukan sesuatu/seseorang.' },
+  { id: 3, label: 'Hari', english: 'Day', category: 'Waktu', videoUrl: '/dictionary/hari.mp4', cleanKey: 'hari', description: 'Satuan waktu siklus harian.' },
+  { id: 4, label: 'Ingat', english: 'Remember', category: 'Aktivitas', videoUrl: '/dictionary/ingat.mp4', cleanKey: 'ingat', description: 'Mengingat sesuatu di masa lalu.' },
+  { id: 5, label: 'Lagi', english: 'Again', category: 'Aktivitas', videoUrl: '/dictionary/lagi.mp4', cleanKey: 'lagi', description: 'Menunjukkan pengulangan suatu tindakan.' },
+  { id: 6, label: 'Maaf', english: 'Sorry', category: 'Sosial', videoUrl: '/dictionary/maaf.mp4', cleanKey: 'maaf', description: 'Ungkapan permohonan maaf.' },
+  { id: 7, label: 'Makan', english: 'Eat', category: 'Aktivitas', videoUrl: '/dictionary/makan.mp4', cleanKey: 'makan', description: 'Aktivitas mengonsumsi makanan.' },
+  { id: 8, label: 'Motor', english: 'Motorcycle', category: 'Aktivitas', videoUrl: '/dictionary/motor.mp4', cleanKey: 'motor', description: 'Kendaraan bermotor roda dua.' },
+  { id: 9, label: 'Saya', english: 'I', category: 'Sosial', videoUrl: '/dictionary/saya.mp4', cleanKey: 'saya', description: 'Kata ganti orang pertama.' },
+  { id: 10, label: 'Terima kasih', english: 'Thank you', category: 'Sosial', videoUrl: '/dictionary/terima_kasih.mp4', cleanKey: 'terima_kasih', description: 'Ungkapan rasa syukur dan terima kasih.' },
+  { id: 11, label: 'Tuli', english: 'Deaf', category: 'Sosial', videoUrl: '/dictionary/tuli.mp4', cleanKey: 'tuli', description: 'Menyebut penyandang Tuli atau kondisi tuli.' },
+  { id: 12, label: 'Apa', english: 'What', category: 'Pertanyaan', videoUrl: '/dictionary/apa.mp4', cleanKey: 'apa', description: 'Menanyakan sesuatu hal atau kejadian.' },
+  { id: 13, label: 'Siapa', english: 'Who', category: 'Pertanyaan', videoUrl: '/dictionary/siapa.mp4', cleanKey: 'siapa', description: 'Menanyakan identitas seseorang.' },
+  { id: 14, label: 'Kapan', english: 'When', category: 'Pertanyaan', videoUrl: '/dictionary/kapan.mp4', cleanKey: 'kapan', description: 'Menanyakan waktu suatu kejadian.' },
+  { id: 15, label: 'Di mana', english: 'Where', category: 'Pertanyaan', videoUrl: '/dictionary/di_mana.mp4', cleanKey: 'di_mana', description: 'Menanyakan tempat atau lokasi.' },
+  { id: 16, label: 'Mengapa', english: 'Why', category: 'Pertanyaan', videoUrl: '/dictionary/mengapa.mp4', cleanKey: 'mengapa', description: 'Menanyakan alasan atau sebab.' },
+  { id: 17, label: 'Bagaimana', english: 'How', category: 'Pertanyaan', videoUrl: '/dictionary/bagaimana.mp4', cleanKey: 'bagaimana', description: 'Menanyakan cara, keadaan, atau proses.' },
+  { id: 18, label: 'Merah', english: 'Red', category: 'Warna', videoUrl: '/dictionary/merah.mp4', cleanKey: 'merah', description: 'Warna merah.' },
+  { id: 19, label: 'Kuning', english: 'Yellow', category: 'Warna', videoUrl: '/dictionary/kuning.mp4', cleanKey: 'kuning', description: 'Warna kuning.' },
+  { id: 20, label: 'Hijau', english: 'Green', category: 'Warna', videoUrl: '/dictionary/hijau.mp4', cleanKey: 'hijau', description: 'Warna hijau.' },
+  { id: 21, label: 'Hitam', english: 'Black', category: 'Warna', videoUrl: '/dictionary/hitam.mp4', cleanKey: 'hitam', description: 'Warna hitam.' },
+  { id: 22, label: 'Dengar', english: 'Hear', category: 'Sosial', videoUrl: '/dictionary/dengar.mp4', cleanKey: 'dengar', description: 'Mendengar atau kemampuan mendengar.' },
+  { id: 23, label: 'Berangkat', english: 'Depart', category: 'Aktivitas', videoUrl: '/dictionary/berangkat.mp4', cleanKey: 'berangkat', description: 'Memulai perjalanan menuju suatu tempat.' },
+  { id: 24, label: 'Datang', english: 'Come', category: 'Aktivitas', videoUrl: '/dictionary/datang.mp4', cleanKey: 'datang', description: 'Tiba di suatu tempat.' },
+  { id: 25, label: 'Teman', english: 'Friend', category: 'Sosial', videoUrl: '/dictionary/teman.mp4', cleanKey: 'teman', description: 'Kawan atau sahabat.' },
+  { id: 26, label: 'Keluarga', english: 'Family', category: 'Sosial', videoUrl: '/dictionary/keluarga.mp4', cleanKey: 'keluarga', description: 'Anggota keluarga.' },
+  { id: 27, label: 'Rumah', english: 'House', category: 'Aktivitas', videoUrl: '/dictionary/rumah.mp4', cleanKey: 'rumah', description: 'Tempat tinggal.' },
+  { id: 28, label: 'Pagi', english: 'Morning', category: 'Waktu', videoUrl: '/dictionary/pagi.mp4', cleanKey: 'pagi', description: 'Waktu pagi hari.' },
+  { id: 29, label: 'Siang', english: 'Noon', category: 'Waktu', videoUrl: '/dictionary/siang.mp4', cleanKey: 'siang', description: 'Waktu siang hari.' },
+  { id: 30, label: 'Sore', english: 'Afternoon', category: 'Waktu', videoUrl: '/dictionary/sore.mp4', cleanKey: 'sore', description: 'Waktu sore hari.' },
+  { id: 31, label: 'Malam', english: 'Night', category: 'Waktu', videoUrl: '/dictionary/malam.mp4', cleanKey: 'malam', description: 'Waktu malam hari.' },
 ]
 
 /** Map pencarian cepat kata -> URL Video */
@@ -50,16 +58,8 @@ export const SIGN_DICTIONARY_MAP: Record<string, string> = SIGN_DICTIONARY_DATA.
     acc[item.cleanKey] = item.videoUrl
     return acc
   },
-  {} as Record<string, string>
+  {} as Record<string, string>,
 )
-
-// Alias tambahan untuk frasa multi-kata dan variasinya (termasuk TULI)
-SIGN_DICTIONARY_MAP['tuli'] = '/dictionary/isyarat.mp4'
-SIGN_DICTIONARY_MAP['temanuli'] = '/dictionary/isyarat.mp4'
-SIGN_DICTIONARY_MAP['terima kasih'] = '/dictionary/terima_kasih.mp4'
-SIGN_DICTIONARY_MAP['terimakasih'] = '/dictionary/terima_kasih.mp4'
-SIGN_DICTIONARY_MAP['di mana'] = '/dictionary/di_mana.mp4'
-SIGN_DICTIONARY_MAP['dimana'] = '/dictionary/di_mana.mp4'
 
 /** Parsing kalimat teks menjadi daftar token kata/frasa yang tersedia video nya */
 export function parseTextToSignTokens(text: string): { originalWord: string; videoUrl: string | null; labelName?: string }[] {
@@ -80,7 +80,7 @@ export function parseTextToSignTokens(text: string): { originalWord: string; vid
       const phrase = `${words[i]} ${words[i + 1]}`
       if (SIGN_DICTIONARY_MAP[phrase]) {
         const found = SIGN_DICTIONARY_DATA.find(
-          (item) => item.label.toLowerCase() === phrase || item.cleanKey === phrase.replace(' ', '_')
+          (item) => item.label.toLowerCase() === phrase || item.cleanKey === phrase.replace(' ', '_'),
         )
         tokens.push({
           originalWord: phrase,
@@ -96,7 +96,7 @@ export function parseTextToSignTokens(text: string): { originalWord: string; vid
     const singleWord = words[i]
     const foundUrl = SIGN_DICTIONARY_MAP[singleWord] ?? null
     const foundLabel = SIGN_DICTIONARY_DATA.find(
-      (item) => item.label.toLowerCase() === singleWord || item.cleanKey === singleWord
+      (item) => item.label.toLowerCase() === singleWord || item.cleanKey === singleWord,
     )
 
     tokens.push({

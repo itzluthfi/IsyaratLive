@@ -11,69 +11,66 @@ export const GLOSS_LABELS = [
 
 const SEQUENCE_LENGTH = 30 // jumlah frame per buffer (~1 detik @30fps)
 
-const MODEL_V6_URL = '/models/gloss-classifier-v6/model.json'
-const MODEL_V5_URL = '/models/gloss-classifier-v5/model.json'
-const MODEL_V4_URL = '/models/gloss-classifier-v4/model.json'
-const MODEL_V3_URL = '/models/gloss-classifier-v3/model.json'
-const MODEL_V2_URL = '/models/gloss-classifier-v2/model.json'
-const MODEL_V1_URL = '/models/gloss-classifier/model.json'
+/**
+ * Model yang BENAR-BENAR ada di frontend/public/models/ dan terverifikasi
+ * (checkpoint berbeda, file TFJS lengkap) — lihat audit di PRD §15.6.
+ * "v4", "v5", "v6" pernah ditulis di UI versi sebelumnya tapi filenya tidak
+ * pernah ada (v5) atau adalah salinan checkpoint lama (v6) — sudah dihapus
+ * dari sini supaya UI tidak diam-diam fallback ke model lain tanpa
+ * pemberitahuan. GLOSS_MODEL_VERSIONS['latest'] menunjuk ke model terbaru
+ * yang nyata — perbarui ini begitu ada model baru yang benar-benar
+ * dilatih & diekspor.
+ *
+ * "v3" DIKELUARKAN dari daftar (2026-08-10): `gloss-classifier-v3/model.json`
+ * diekspor dari Keras 3.x dengan format `inbound_nodes` baru (objek, bukan
+ * array) yang TIDAK bisa di-parse oleh runtime TensorFlow.js 4.22 di
+ * browser — selalu gagal dengan "Corrupted configuration, expected array
+ * for nodeData". Ini murni bug ekspor Python
+ * (`ml/export/export_tfjs.py`/`tensorflowjs_converter`), bukan sesuatu yang
+ * bisa diperbaiki dari sisi frontend. Untuk memakainya lagi, ekspor ulang
+ * modelnya dengan `tf.keras.Sequential` versi lama atau paksa format
+ * `inbound_nodes` lama sebelum konversi, lalu tambahkan kembali ke daftar
+ * di bawah setelah dites benar-benar bisa `tf.loadLayersModel()` di browser.
+ */
+export const GLOSS_MODEL_VERSIONS = ['v1', 'v2'] as const
+export type GlossModelVersion = (typeof GLOSS_MODEL_VERSIONS)[number]
+export const LATEST_GLOSS_MODEL: GlossModelVersion = 'v2'
 
-const loadedModels: Record<string, tf.LayersModel> = {}
-const loadingPromises: Record<string, Promise<tf.LayersModel>> = {}
+export const GLOSS_MODEL_INFO: Record<GlossModelVersion, { label: string; description: string; inputDim: number }> = {
+  v1: { label: 'Model v1', description: 'Baseline — landmark tangan 126D', inputDim: 126 },
+  v2: {
+    label: 'Model v2 (terbaru)',
+    description: 'Landmark tangan 126D + resampling sequence',
+    inputDim: 126,
+  },
+}
 
-export function loadGlossModel(
-  version: 'v1' | 'v2' | 'v3' | 'v4' | 'v5' | 'v6' = 'v6'
-): Promise<tf.LayersModel> {
+const MODEL_URLS: Record<GlossModelVersion, string> = {
+  v1: '/models/gloss-classifier/model.json',
+  v2: '/models/gloss-classifier-v2/model.json',
+}
+
+const loadedModels: Partial<Record<GlossModelVersion, tf.LayersModel>> = {}
+const loadingPromises: Partial<Record<GlossModelVersion, Promise<tf.LayersModel>>> = {}
+
+export function loadGlossModel(version: GlossModelVersion = LATEST_GLOSS_MODEL): Promise<tf.LayersModel> {
   if (loadedModels[version]) {
-    return Promise.resolve(loadedModels[version])
+    return Promise.resolve(loadedModels[version]!)
   }
 
   if (!loadingPromises[version]) {
-    const url =
-      version === 'v6'
-        ? MODEL_V6_URL
-        : version === 'v5'
-        ? MODEL_V5_URL
-        : version === 'v4'
-        ? MODEL_V4_URL
-        : version === 'v3'
-        ? MODEL_V3_URL
-        : version === 'v2'
-        ? MODEL_V2_URL
-        : MODEL_V1_URL
-
-    loadingPromises[version] = tf.loadLayersModel(url)
+    loadingPromises[version] = tf.loadLayersModel(MODEL_URLS[version])
       .then((m) => {
         loadedModels[version] = m
         return m
       })
       .catch((err) => {
         delete loadingPromises[version]
-        if (version === 'v6') {
-          console.warn('Model v6 belum ada, fallback ke Model v5')
-          return loadGlossModel('v5')
-        }
-        if (version === 'v5') {
-          console.warn('Model v5 belum ada, fallback ke Model v4')
-          return loadGlossModel('v4')
-        }
-        if (version === 'v4') {
-          console.warn('Model v4 belum ada, fallback ke Model v3')
-          return loadGlossModel('v3')
-        }
-        if (version === 'v3') {
-          console.warn('Model v3 belum ada, fallback ke Model v2')
-          return loadGlossModel('v2')
-        }
-        if (version === 'v2') {
-          console.warn('Model v2 belum ada, fallback ke Model v1')
-          return loadGlossModel('v1')
-        }
         throw err
       })
   }
 
-  return loadingPromises[version]
+  return loadingPromises[version]!
 }
 
 // Vector temporal EMA smoothing buffer
@@ -845,7 +842,7 @@ export function extractRawWrists(result: HandLandmarkerResult): { x: number; y: 
   return wrists
 }
 
-function resampleSequenceTS(sequence: number[][], targetLength: number = 30): number[][] {
+export function resampleSequenceTS(sequence: number[][], targetLength: number = 30): number[][] {
   const nFrames = sequence.length
   if (nFrames === 0) return []
   if (nFrames === targetLength) return sequence
@@ -876,6 +873,13 @@ export class GlossSequenceBuffer {
   private candidateConfidence: number = 0
   private candidateTime: number = 0
   private lastEmittedLabel: string | null = null
+  // Burst-then-settle: tunggu gerakan benar-benar mereda sebelum boleh commit
+  // sebuah prediksi, supaya gerakan yang belum selesai tidak ditebak di
+  // tengah jalan (lihat diskusi & plan "Improve deteksi & UX Room Lokal").
+  private hadBurst: boolean = false
+  private settleStreak: number = 0
+  private static readonly BURST_THRESHOLD = 0.02
+  private static readonly SETTLE_FRAMES_REQUIRED = 3
 
   push(frame: number[], rawWrists: { x: number; y: number }[] = []) {
     // Jika dimensi vektor berubah (misal dari 126D ke 160D), bersihkan buffer otomatis
@@ -929,6 +933,15 @@ export class GlossSequenceBuffer {
 
     // Tangan dianggap diam jika rata-rata pergeseran < 0.015
     this.isStill = this.lastMotionEnergy < 0.015
+
+    // Lacak "ada gerakan besar (burst) lalu mereda" — dipakai isReadyToClassify()
+    // supaya sistem tidak menebak di tengah gerakan yang belum selesai.
+    if (this.lastMotionEnergy >= GlossSequenceBuffer.BURST_THRESHOLD) {
+      this.hadBurst = true
+      this.settleStreak = 0
+    } else if (this.isStill) {
+      this.settleStreak++
+    }
   }
 
   getMotionEnergy(): number {
@@ -937,6 +950,16 @@ export class GlossSequenceBuffer {
 
   getIsStill(): boolean {
     return this.isStill
+  }
+
+  /**
+   * True hanya setelah pernah ada gerakan yang cukup besar (burst) DAN
+   * tangan sudah diam lagi selama beberapa frame berturut-turut. Ini
+   * gerbang utama supaya classify() tidak commit di tengah gerakan yang
+   * belum selesai — hanya dipanggil setelah tangan benar-benar berhenti.
+   */
+  isReadyToClassify(): boolean {
+    return this.hadBurst && this.settleStreak >= GlossSequenceBuffer.SETTLE_FRAMES_REQUIRED
   }
 
   isFull(): boolean {
@@ -949,6 +972,8 @@ export class GlossSequenceBuffer {
     this.isStill = true
     this.lastMotionEnergy = 0
     this.candidateLabel = null
+    this.hadBurst = false
+    this.settleStreak = 0
   }
 
   async classify(
@@ -956,7 +981,7 @@ export class GlossSequenceBuffer {
     isDegradedMode: boolean = false
   ): Promise<{ label: string; confidence: number } | null> {
     const now = performance.now()
-    if (this.frames.length < 12) return null
+    if (this.frames.length < 16) return null
     if (now < this.cooldownUntil) return null
 
     // 1. FILTER REST POSITION (Tangan di paling bawah layar):
@@ -967,9 +992,11 @@ export class GlossSequenceBuffer {
       return null
     }
 
-    // 2. FILTER GERAKAN SANGAT KECIL / HANDS IDLE:
-    if (this.lastMotionEnergy < 0.008) {
-      this.candidateLabel = null
+    // 2. TUNGGU GERAKAN MEREDA (burst-then-settle): jangan commit prediksi
+    // di tengah gerakan yang belum selesai — hanya boleh lanjut setelah
+    // pernah ada gerakan cukup besar DAN tangan sudah diam lagi beberapa
+    // frame berturut-turut. Selama itu, tetap buffering diam-diam.
+    if (!this.isReadyToClassify()) {
       return null
     }
 
@@ -1025,18 +1052,17 @@ export class GlossSequenceBuffer {
 
         console.log(`🤖 [Predict] Gloss: ${finalLabel} (${(topConfidence * 100).toFixed(1)}%), Margin: ${(margin * 100).toFixed(1)}%, Motion: ${this.lastMotionEnergy.toFixed(4)}`)
 
-        // 5. AMBANG BATAS RESPONSINF SANGAT KENCANG:
-        const minConfidence = isDegradedMode ? 0.45 : 0.54
-        const minMargin = isDegradedMode ? 0.05 : 0.10
+        // 5. AMBANG BATAS RESPONSINSIP PRESISI (Mencegah Tebakan Asal):
+        const minConfidence = isDegradedMode ? 0.52 : 0.62
+        const minMargin = isDegradedMode ? 0.08 : 0.15
 
         if (topConfidence < minConfidence || margin < minMargin) {
           this.candidateLabel = null
           return null
         }
 
-        // 6. FAST-PATH INSTANT TRIGGER:
-        // Jika kepercayaan >= 60% (atau 52% di per-kata), LANGSUNG TRIGGER INSTAN!
-        const instantThreshold = isDegradedMode ? 0.52 : 0.60
+        // 6. FAST-PATH INSTANT TRIGGER HANYA SAAT SANGAT YAKIN (>=72%):
+        const instantThreshold = isDegradedMode ? 0.62 : 0.72
         if (topConfidence >= instantThreshold) {
           this.lastEmittedLabel = finalLabel
           this.cooldownUntil = now + 1400
@@ -1044,8 +1070,9 @@ export class GlossSequenceBuffer {
           return { label: finalLabel, confidence: topConfidence }
         }
 
-        // 7. TEMPORAL DOUBLE VERIFICATION UNTUK CONFIDENCE SEDANG (54% - 60%):
-        if (this.candidateLabel === finalLabel && now - this.candidateTime < 600) {
+        // 7. TEMPORAL DOUBLE VERIFICATION UNTUK CONFIDENCE SEDANG (62% - 72%):
+        // Wajib melihat label yang sama 2 kali berturut-turut sebelum di-commit!
+        if (this.candidateLabel === finalLabel && now - this.candidateTime < 800) {
           const finalConfidence = Math.max(topConfidence, this.candidateConfidence)
           this.lastEmittedLabel = finalLabel
           this.cooldownUntil = now + 1400
