@@ -21,6 +21,22 @@ NUM_HANDS = 2
 NUM_POINTS = 21
 
 
+def resample_sequence(sequence: np.ndarray, target_length: int = 30) -> np.ndarray:
+    n_frames = len(sequence)
+    if n_frames == 0:
+        return np.zeros((target_length, NUM_HANDS * NUM_POINTS * 3), dtype=np.float32)
+    if n_frames == target_length:
+        return sequence
+    indices = np.linspace(0, n_frames - 1, target_length)
+    resampled = np.zeros((target_length, sequence.shape[1]), dtype=np.float32)
+    for i, idx in enumerate(indices):
+        low = int(np.floor(idx))
+        high = min(int(np.ceil(idx)), n_frames - 1)
+        weight = idx - low
+        resampled[i] = (1.0 - weight) * sequence[low] + weight * sequence[high]
+    return resampled
+
+
 def extract_video_landmarks(video_path: Path, landmarker) -> np.ndarray:
     cap = cv2.VideoCapture(str(video_path))
     frames = []
@@ -35,14 +51,64 @@ def extract_video_landmarks(video_path: Path, landmarker) -> np.ndarray:
         result = landmarker.detect(mp_image)
 
         vector = np.zeros(NUM_HANDS * NUM_POINTS * 3, dtype=np.float32)
-        for h, hand_landmarks in enumerate(result.hand_landmarks[:NUM_HANDS]):
-            for i, point in enumerate(hand_landmarks[:NUM_POINTS]):
-                offset = (h * NUM_POINTS + i) * 3
-                vector[offset : offset + 3] = [point.x, point.y, point.z]
+        if result.hand_landmarks and result.handedness:
+            left_hand = None
+            right_hand = None
+            for hand_landmarks, handedness in zip(result.hand_landmarks[:NUM_HANDS], result.handedness[:NUM_HANDS]):
+                label = handedness[0].category_name if len(handedness) > 0 else "Left"
+                if label == "Left":
+                    left_hand = hand_landmarks
+                else:
+                    right_hand = hand_landmarks
+
+            # Slot 0: Left Hand
+            if left_hand and len(left_hand) > 0:
+                wrist = left_hand[0]
+                middle_mcp = left_hand[9] if len(left_hand) > 9 else None
+                scale = 1.0
+                if wrist and middle_mcp:
+                    dx = middle_mcp.x - wrist.x
+                    dy = middle_mcp.y - wrist.y
+                    dz = middle_mcp.z - wrist.z
+                    dist = (dx * dx + dy * dy + dz * dz) ** 0.5
+                    if dist > 0.001:
+                        scale = dist
+
+                for i, pt in enumerate(left_hand[:NUM_POINTS]):
+                    vector[i * 3 : i * 3 + 3] = [
+                        (pt.x - wrist.x) / scale,
+                        (pt.y - wrist.y) / scale,
+                        (pt.z - wrist.z) / scale,
+                    ]
+
+            # Slot 1: Right Hand
+            if right_hand and len(right_hand) > 0:
+                wrist = right_hand[0]
+                middle_mcp = right_hand[9] if len(right_hand) > 9 else None
+                scale = 1.0
+                if wrist and middle_mcp:
+                    dx = middle_mcp.x - wrist.x
+                    dy = middle_mcp.y - wrist.y
+                    dz = middle_mcp.z - wrist.z
+                    dist = (dx * dx + dy * dy + dz * dz) ** 0.5
+                    if dist > 0.001:
+                        scale = dist
+
+                for i, pt in enumerate(right_hand[:NUM_POINTS]):
+                    offset = 63 + i * 3
+                    vector[offset : offset + 3] = [
+                        (pt.x - wrist.x) / scale,
+                        (pt.y - wrist.y) / scale,
+                        (pt.z - wrist.z) / scale,
+                    ]
+
         frames.append(vector)
 
     cap.release()
-    return np.stack(frames) if frames else np.zeros((0, NUM_HANDS * NUM_POINTS * 3), dtype=np.float32)
+    if not frames:
+        return np.zeros((30, NUM_HANDS * NUM_POINTS * 3), dtype=np.float32)
+    raw_seq = np.stack(frames)
+    return resample_sequence(raw_seq, 30)
 
 
 def main():

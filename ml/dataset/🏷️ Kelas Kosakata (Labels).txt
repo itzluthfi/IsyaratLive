@@ -1,0 +1,40 @@
+🏷️ Kelas Kosakata (Labels)
+Label	Gloss		English Translation	
+0	Air		Water	
+1	Belajar		Learn	
+2	Cari		Search	
+3	Hari		Day	
+4	Ingat		Remember	
+5	Lagi		Again	
+6	Maaf		Sorry	
+7	Makan		Eat	
+8	Motor		Motorcycle	
+9	Saya		I	
+10	Terima kasih	Thank you	
+11	Tuli		Deaf	
+12	Apa		What	
+13	Siapa		Who	
+14	Kapan		When	
+15	Di mana		Where	
+16	Mengapa		Why
+17	Bagaimana	How
+18	Merah		Red
+19	Kuning		Yellow
+20	Hijau		Green
+21	Hitam		Black
+22	Dengar		Hear
+23	Berangkat	Depart
+24	Datang		Come
+25	Teman		Friend
+26	Keluarga	Family
+27	Rumah		House
+28	Pagi		Morning
+29	Siang		Noon
+30	Sore		Afternoon
+31	Malam		Night
+
+
+
+
+
+
