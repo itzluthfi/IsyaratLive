@@ -26,11 +26,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
             IsyaRasa — Penerjemah Bahasa Isyarat BISINDO Real-Time
           </h1>
-          <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
+          <p className="text-sm sm:text-base font-semibold text-slate-700 uppercase tracking-wide">
+            Aplikasi Penerjemah Bahasa Isyarat Dua Arah Berbasis Computer Vision & AI untuk Komunikasi Inklusif
+          </p>
+          <p className="text-base text-slate-600 font-normal leading-relaxed max-w-2xl mx-auto">
             Menghubungkan penyandang Tuli dan masyarakat dengar secara dua arah: 
             <span className="font-semibold text-slate-800"> Gerakan Isyarat ➔ Teks & Suara</span>, serta 
-            <span className="font-semibold text-slate-800"> Teks/Suara ➔ Rangkaian Video Isyarat</span>. 
-            Langsung dari browser tanpa perantara juru bahasa.
+            <span className="font-semibold text-slate-800"> Teks/Suara ➔ Video Isyarat</span>.
           </p>
         </div>
 

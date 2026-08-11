@@ -69,10 +69,10 @@ function App() {
             <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
             <button onClick={() => setIsDictionaryOpen(true)} className="btn-secondary text-xs">
-              32 Kata
+              📖 Kamus 32 Kata
             </button>
             <button onClick={() => setIsAccuracyOpen(true)} className="btn-secondary text-xs">
-              Uji Akurasi
+              📊 Uji Akurasi Model
             </button>
           </div>
         </div>
