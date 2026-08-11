@@ -24,7 +24,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <div className="space-y-4 max-w-3xl mx-auto">
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-            Penerjemah Bahasa Isyarat BISINDO Real-Time Berbasis AI
+            IsyaRasa — Penerjemah Bahasa Isyarat BISINDO Real-Time
           </h1>
           <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
             Menghubungkan penyandang Tuli dan masyarakat dengar secara dua arah: 

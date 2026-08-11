@@ -1,7 +1,7 @@
-# IsyaratLive
+# IsyaRasa
 
 Penerjemah BISINDO (Bahasa Isyarat Indonesia) real-time berbasis AI —
-GEMASTIK XIX 2026, Divisi VIII. Dokumen produk lengkap ada di
+GEMASTIK XIX 2026, Divisi VIII: Pengembangan Perangkat Lunak. Dokumen produk lengkap ada di
 [`docs/PRD_IsyaratLive.md`](docs/PRD_IsyaratLive.md) (lihat §15.6/§15.7 untuk
 audit & status terbaru).
 
