@@ -54,6 +54,20 @@ cd frontend && npm test   # Vitest — parsing dictionary, vector klasifikasi, b
 cd backend  && npm test   # Vitest + Supertest — endpoint /normalize & /history
 ```
 
+## Deployment / Hosting (Docker & VPS)
+
+Panduan lengkap mengenai arsitektur Docker 4-container (Caddy, Frontend Nginx, Backend Node.js, MySQL) dan pendaftaran sertifikat HTTPS/SSL otomatis tersedia di file tersendiri:
+
+👉 **[`docs/DEPLOY.md`](docs/DEPLOY.md)**
+
+Ringkasan deploy di VPS Ubuntu:
+```bash
+git clone https://github.com/itzluthfi/IsyaratLive.git isyaratlive && cd isyaratlive
+cp .env.example .env && cp backend/.env.example backend/.env
+# isi DOMAIN & API key di file .env
+docker compose up -d --build
+```
+
 ## Status implementasi
 
 Lihat checklist fase lengkap & audit di PRD bagian 15.2–15.9. Ringkas:
@@ -64,4 +78,5 @@ Lihat checklist fase lengkap & audit di PRD bagian 15.2–15.9. Ringkas:
       tapi belum lewat pipeline training resmi ml/ dataset WL-BISINDO (§15.6)
 - [x] **Fase 2/3** — backend, Room Lokal (kamera↔teks & teks↔isyarat satu feed obrolan)
 - [x] **Fase 4** — Mode 2 (dictionary video, 32 kata) + Room Remote (video call WebRTC 1-lawan-1)
-- [ ] **Fase 5** — deployment ke VPS
+- [x] **Fase 5** — deployment ke VPS (Docker Compose + Caddy HTTPS otomatis di `docs/DEPLOY.md`)
+
