@@ -33,9 +33,6 @@ export function DictionaryModal({ isOpen, onClose, onSelectWordForTextToSign }: 
         {/* Header Modal */}
         <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 text-slate-900">
           <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700 text-lg border border-slate-200">
-              📖
-            </span>
             <div>
               <h2 className="text-base font-bold text-slate-900">Kamus Kosakata BISINDO</h2>
               <p className="text-xs text-slate-500">
@@ -75,9 +72,8 @@ export function DictionaryModal({ isOpen, onClose, onSelectWordForTextToSign }: 
               placeholder="Cari label (Air, Makan)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 placeholder-slate-400 focus:border-slate-800 focus:outline-none"
+              className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-3 text-xs text-slate-900 placeholder-slate-400 focus:border-slate-800 focus:outline-none"
             />
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
           </div>
         </div>
 
@@ -108,7 +104,7 @@ export function DictionaryModal({ isOpen, onClose, onSelectWordForTextToSign }: 
                     onClick={() => setPreviewItem(item)}
                     className="btn-primary flex-1 text-xs py-1.5"
                   >
-                    ▶️ Tonton Video
+                    Tonton Video
                   </button>
 
                   {onSelectWordForTextToSign && (
@@ -120,7 +116,7 @@ export function DictionaryModal({ isOpen, onClose, onSelectWordForTextToSign }: 
                       className="btn-secondary text-xs py-1.5 px-2.5"
                       title="Tes kata di Teks -> Isyarat"
                     >
-                      ✨ Tes
+                      Tes
                     </button>
                   )}
                 </div>
@@ -130,7 +126,6 @@ export function DictionaryModal({ isOpen, onClose, onSelectWordForTextToSign }: 
 
           {filteredData.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <span className="text-2xl">🔍</span>
               <p className="mt-2 text-sm font-semibold text-slate-700">Tidak ada label yang cocok dengan "{searchQuery}"</p>
               <p className="text-xs text-slate-400">Coba ubah kata kunci atau pilih kategori lain.</p>
             </div>
@@ -180,7 +175,7 @@ export function DictionaryModal({ isOpen, onClose, onSelectWordForTextToSign }: 
             </div>
 
             <p className="mt-3 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-              💡 {previewItem.description}
+              {previewItem.description}
             </p>
 
             <div className="mt-4 flex gap-2">
@@ -193,7 +188,7 @@ export function DictionaryModal({ isOpen, onClose, onSelectWordForTextToSign }: 
                   }}
                   className="btn-primary flex-1 text-xs py-2"
                 >
-                  🚀 Coba di Teks ➔ Isyarat
+                  Coba di Teks -&gt; Isyarat
                 </button>
               )}
               <button

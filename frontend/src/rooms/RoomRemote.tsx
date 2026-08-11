@@ -277,9 +277,6 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
     return (
       <div className="flex flex-col items-center gap-6 py-8">
         <div className="card max-w-md w-full p-6 text-center space-y-4">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-700 text-2xl border border-slate-200">
-            📹
-          </div>
           <div>
             <h2 className="text-lg font-bold text-slate-900">Room Remote P2P</h2>
             <p className="mt-1 text-xs text-slate-500 leading-relaxed">
@@ -289,7 +286,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
           <div className="flex flex-col gap-3 pt-2">
             <button onClick={handleCreateRoom} className="btn-primary w-full py-2.5">
-              🚀 Buat Room Baru
+              Buat Room Baru
             </button>
 
             <div className="flex items-center gap-2 text-xs text-slate-400 my-1">
@@ -314,7 +311,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
           {onOpenDictionaryModal && (
             <button onClick={onOpenDictionaryModal} className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors pt-2 block mx-auto">
-              📖 Lihat 32 label kosakata BISINDO
+              Lihat 32 label kosakata BISINDO
             </button>
           )}
         </div>
@@ -345,7 +342,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
             onClick={() => setDetectionOn((v) => !v)}
             className={detectionOn ? 'btn-primary text-xs py-1.5 px-3' : 'btn-secondary text-xs py-1.5 px-3'}
           >
-            {detectionOn ? '🟢 Deteksi Aktif' : '⚪ Deteksi Nonaktif'}
+            {detectionOn ? 'Deteksi Aktif' : 'Deteksi Nonaktif'}
           </button>
           <button onClick={handleLeaveRoom} className="btn-danger text-xs py-1.5 px-3">
             Keluar Room
@@ -355,7 +352,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
       {errorMsg && (
         <div className="badge-warning w-full rounded-lg px-3.5 py-2 text-xs flex items-center justify-between">
-          <span>⚠️ {errorMsg}</span>
+          <span>{errorMsg}</span>
           <button onClick={() => setErrorMsg(null)} className="text-amber-900 font-bold hover:underline">✕</button>
         </div>
       )}

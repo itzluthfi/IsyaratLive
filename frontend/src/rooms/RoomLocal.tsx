@@ -54,13 +54,13 @@ export function RoomLocal({ onOpenDictionaryModal, wordToSign }: RoomLocalProps)
             onClick={() => setPanel('sign-to-text')}
             className={panel === 'sign-to-text' ? 'tab-pill-active' : 'tab-pill'}
           >
-            🖐️ Kamera ➔ Teks & Suara
+            Kamera -&gt; Teks &amp; Suara
           </button>
           <button
             onClick={() => setPanel('text-to-sign')}
             className={panel === 'text-to-sign' ? 'tab-pill-active' : 'tab-pill'}
           >
-            ⌨️ Teks/Suara ➔ Isyarat
+            Teks/Suara -&gt; Isyarat
           </button>
         </div>
         <div className="flex items-center gap-2">

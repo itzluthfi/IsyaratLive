@@ -37,10 +37,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* Primary CTA Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
           <button onClick={onStartLocalRoom} className="btn-primary text-sm px-6 py-3 shadow-sm">
-            <span>🖐️</span> Buka Room Lokal (Tatap Muka)
+            Buka Room Lokal (Tatap Muka)
           </button>
           <button onClick={onStartRemoteRoom} className="btn-secondary text-sm px-6 py-3">
-            <span>📹</span> Panggilan Remote (WebRTC P2P)
+            Panggilan Remote (WebRTC P2P)
           </button>
         </div>
       </section>
@@ -48,18 +48,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Feature Highlights Grid */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="card p-6 space-y-3 hover:border-slate-300 transition-colors">
-          <div className="h-10 w-10 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 text-xl font-bold">
-            ⚡
+          <div className="h-10 w-10 rounded-lg bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 font-bold text-sm">
+            AI
           </div>
-          <h3 className="text-base font-bold text-slate-900">Architecture 2-Lapis AI</h3>
+          <h3 className="text-base font-bold text-slate-900">Arsitektur 2-Lapis AI</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
             Mengkombinasikan Computer Vision (MediaPipe + TF.js) untuk ekstraksi 21 landmark tangan dan LLM (9Router) untuk menyusun gloss menjadi kalimat Indonesia yang alami.
           </p>
         </div>
 
         <div className="card p-6 space-y-3 hover:border-slate-300 transition-colors">
-          <div className="h-10 w-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 text-xl font-bold">
-            🛡️
+          <div className="h-10 w-10 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 font-bold text-sm">
+            OFF
           </div>
           <h3 className="text-base font-bold text-slate-900">Degradasi Anggun (Offline)</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
@@ -68,8 +68,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         <div className="card p-6 space-y-3 hover:border-slate-300 transition-colors">
-          <div className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 text-xl font-bold">
-            🎥
+          <div className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-sm">
+            P2P
           </div>
           <h3 className="text-base font-bold text-slate-900">WebRTC Video Call P2P</h3>
           <p className="text-xs text-slate-600 leading-relaxed">
@@ -89,10 +89,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <div className="flex items-center gap-2">
           <button onClick={onOpenDictionary} className="btn-secondary text-xs">
-            📖 32 Label Kamus
+            32 Label Kamus
           </button>
           <button onClick={onOpenAccuracyTest} className="btn-secondary text-xs">
-            📊 Uji Akurasi Model
+            Uji Akurasi Model
           </button>
         </div>
       </section>

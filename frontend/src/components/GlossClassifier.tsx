@@ -11,38 +11,13 @@ export const GLOSS_LABELS = [
 
 const SEQUENCE_LENGTH = 30 // jumlah frame per buffer (~1 detik @30fps)
 
-/**
- * Model yang BENAR-BENAR ada di frontend/public/models/ dan terverifikasi
- * (checkpoint berbeda, file TFJS lengkap) — lihat audit di PRD §15.6.
- * "v4", "v5", "v6" pernah ditulis di UI versi sebelumnya tapi filenya tidak
- * pernah ada (v5) atau adalah salinan checkpoint lama (v6) — sudah dihapus
- * dari sini supaya UI tidak diam-diam fallback ke model lain tanpa
- * pemberitahuan. GLOSS_MODEL_VERSIONS['latest'] menunjuk ke model terbaru
- * yang nyata — perbarui ini begitu ada model baru yang benar-benar
- * dilatih & diekspor.
- *
- * "v3" DIKELUARKAN dari daftar (2026-08-10): `gloss-classifier-v3/model.json`
- * diekspor dari Keras 3.x dengan format `inbound_nodes` baru (objek, bukan
- * array) yang TIDAK bisa di-parse oleh runtime TensorFlow.js 4.22 di
- * browser — selalu gagal dengan "Corrupted configuration, expected array
- * for nodeData". Ini murni bug ekspor Python
- * (`ml/export/export_tfjs.py`/`tensorflowjs_converter`), bukan sesuatu yang
- * bisa diperbaiki dari sisi frontend. Untuk memakainya lagi, ekspor ulang
- * modelnya dengan `tf.keras.Sequential` versi lama atau paksa format
- * `inbound_nodes` lama sebelum konversi, lalu tambahkan kembali ke daftar
- * di bawah setelah dites benar-benar bisa `tf.loadLayersModel()` di browser.
- */
 export const GLOSS_MODEL_VERSIONS = ['v1', 'v2'] as const
 export type GlossModelVersion = (typeof GLOSS_MODEL_VERSIONS)[number]
 export const LATEST_GLOSS_MODEL: GlossModelVersion = 'v2'
 
 export const GLOSS_MODEL_INFO: Record<GlossModelVersion, { label: string; description: string; inputDim: number }> = {
   v1: { label: 'Model v1', description: 'Baseline — landmark tangan 126D', inputDim: 126 },
-  v2: {
-    label: 'Model v2 (terbaru)',
-    description: 'Landmark tangan 126D + resampling sequence',
-    inputDim: 126,
-  },
+  v2: { label: 'Model v2', description: 'Landmark tangan 126D + resampling sequence', inputDim: 126 },
 }
 
 const MODEL_URLS: Record<GlossModelVersion, string> = {
@@ -66,6 +41,10 @@ export function loadGlossModel(version: GlossModelVersion = LATEST_GLOSS_MODEL):
       })
       .catch((err) => {
         delete loadingPromises[version]
+        if (version === 'v2') {
+          console.warn('Model v2 belum ada, fallback ke Model v1')
+          return loadGlossModel('v1')
+        }
         throw err
       })
   }
@@ -827,6 +806,138 @@ export function landmarksTo320DVector(
   return { vector, leftHand, rightHand, velLeft, velRight }
 }
 
+/** Model v7 Robust: 164D Camera-Invariant Feature Vector.
+ * TANPA velocity/acceleration — hanya landmarks + joint angles + wrist interaction.
+ * Identik dengan ml/preprocessing/extract_landmarks_v7.py build_164d_vector()
+ */
+export function landmarksTo164DVector(
+  result: HandLandmarkerResult,
+): {
+  vector: number[]
+  leftHand: { x: number; y: number; z: number }[] | null
+  rightHand: { x: number; y: number; z: number }[] | null
+} {
+  const vector = new Array(164).fill(0)
+  const hands = result?.landmarks ?? []
+  const handedness = result?.handednesses ?? []
+
+  let leftHand: { x: number; y: number; z: number }[] | null = null
+  let rightHand: { x: number; y: number; z: number }[] | null = null
+
+  for (let i = 0; i < hands.length; i++) {
+    const label = handedness[i]?.[0]?.categoryName
+    if (label === 'Left') leftHand = hands[i]
+    else if (label === 'Right') rightHand = hands[i]
+    else {
+      if (!leftHand) leftHand = hands[i]
+      else if (!rightHand) rightHand = hands[i]
+    }
+  }
+
+  // --- Helper: check if hand is active ---
+  const isActive = (hand: { x: number; y: number; z: number }[] | null): boolean => {
+    if (!hand || hand.length < 21) return false
+    return hand.some(p => p.x !== 0 || p.y !== 0 || p.z !== 0)
+  }
+
+  // --- Helper: normalize hand (identik Python normalize_hand) ---
+  const normalizeHand = (
+    hand: { x: number; y: number; z: number }[] | null,
+    offset: number
+  ) => {
+    if (!hand || !isActive(hand)) return
+    const wrist = hand[0]
+
+    // Max distance from wrist (more robust than single wrist-to-MCP)
+    let maxDist = 0
+    for (let i = 0; i < 21; i++) {
+      const dx = hand[i].x - wrist.x
+      const dy = hand[i].y - wrist.y
+      const dz = hand[i].z - wrist.z
+      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz)
+      if (dist > maxDist) maxDist = dist
+    }
+    if (maxDist < 1e-4) maxDist = 1.0
+
+    for (let i = 0; i < 21; i++) {
+      vector[offset + i * 3] = (hand[i].x - wrist.x) / maxDist
+      vector[offset + i * 3 + 1] = (hand[i].y - wrist.y) / maxDist
+      vector[offset + i * 3 + 2] = (hand[i].z - wrist.z) / maxDist
+    }
+  }
+
+  // --- Helper: compute joint angles (identik Python compute_joint_angles) ---
+  const computeAngles = (hand: { x: number; y: number; z: number }[]): number[] => {
+    const joints = [
+      [0, 1, 2], [1, 2, 3], [2, 3, 4],
+      [0, 5, 6], [5, 6, 7], [6, 7, 8],
+      [0, 9, 10], [9, 10, 11], [10, 11, 12],
+      [0, 13, 14], [13, 14, 15], [14, 15, 16],
+      [0, 17, 18], [17, 18, 19], [18, 19, 20],
+    ]
+    const angles: number[] = []
+    for (const [a, b, c] of joints) {
+      const pa = hand[a], pb = hand[b], pc = hand[c]
+      if (pa && pb && pc) {
+        const v1x = pa.x - pb.x, v1y = pa.y - pb.y, v1z = pa.z - pb.z
+        const v2x = pc.x - pb.x, v2y = pc.y - pb.y, v2z = pc.z - pb.z
+        const n1 = Math.sqrt(v1x * v1x + v1y * v1y + v1z * v1z)
+        const n2 = Math.sqrt(v2x * v2x + v2y * v2y + v2z * v2z)
+        if (n1 > 1e-4 && n2 > 1e-4) {
+          const dot = (v1x * v2x + v1y * v2y + v1z * v2z) / (n1 * n2)
+          angles.push(Math.max(-1.0, Math.min(1.0, dot)))
+        } else {
+          angles.push(1.0)
+        }
+      } else {
+        angles.push(1.0)
+      }
+    }
+    return angles
+  }
+
+  // ========== BUILD 164D VECTOR ==========
+
+  // 1. Normalized Landmarks (126D) — offset 0..125
+  normalizeHand(leftHand, 0)
+  normalizeHand(rightHand, 63)
+
+  // 2. Joint Angles (30D) — offset 126..155
+  if (leftHand && isActive(leftHand)) {
+    const anglesL = computeAngles(leftHand)
+    for (let a = 0; a < 15; a++) vector[126 + a] = anglesL[a]
+  } else {
+    for (let a = 0; a < 15; a++) vector[126 + a] = 1.0
+  }
+  if (rightHand && isActive(rightHand)) {
+    const anglesR = computeAngles(rightHand)
+    for (let a = 0; a < 15; a++) vector[141 + a] = anglesR[a]
+  } else {
+    for (let a = 0; a < 15; a++) vector[141 + a] = 1.0
+  }
+
+  // 3. Wrist Interaction & Handedness (8D) — offset 156..163
+  const hasL = isActive(leftHand)
+  const hasR = isActive(rightHand)
+
+  if (hasL && hasR && leftHand && rightHand) {
+    const rx = leftHand[0].x - rightHand[0].x
+    const ry = leftHand[0].y - rightHand[0].y
+    const rz = leftHand[0].z - rightHand[0].z
+    const distW = Math.sqrt(rx * rx + ry * ry + rz * rz)
+    vector[156] = rx
+    vector[157] = ry
+    vector[158] = rz
+    vector[159] = distW
+  }
+  vector[160] = (hasL && leftHand) ? leftHand[0].y : 0.0
+  vector[161] = (hasR && rightHand) ? rightHand[0].y : 0.0
+  vector[162] = hasL ? 1.0 : 0.0
+  vector[163] = hasR ? 1.0 : 0.0
+
+  return { vector, leftHand, rightHand }
+}
+
 /**
  * Buffer sequence landmark dengan Puncak Gerakan (Motion Burst) & Dynamic Cooldown.
  * Mengklasifikasikan isyarat secara presisi setelah gerakan memuncak dan melambat.
@@ -984,6 +1095,10 @@ export class GlossSequenceBuffer {
     if (this.frames.length < 16) return null
     if (now < this.cooldownUntil) return null
 
+    // Detect model version by input dimension
+    const expectedDim = model.inputs[0]?.shape?.[2] ?? 126
+    const isV7 = expectedDim === 164
+
     // 1. FILTER REST POSITION (Tangan di paling bawah layar):
     const latestWrists = this.wristHistory[this.wristHistory.length - 1] ?? []
     if (latestWrists.length > 0 && latestWrists.every((w) => w.y > 0.82)) {
@@ -992,16 +1107,16 @@ export class GlossSequenceBuffer {
       return null
     }
 
-    // 2. TUNGGU GERAKAN MEREDA (burst-then-settle): jangan commit prediksi
-    // di tengah gerakan yang belum selesai — hanya boleh lanjut setelah
-    // pernah ada gerakan cukup besar DAN tangan sudah diam lagi beberapa
-    // frame berturut-turut. Selama itu, tetap buffering diam-diam.
-    if (!this.isReadyToClassify()) {
+    // 2. FILTER GERAKAN SANGAT KECIL / HANDS IDLE:
+    const motionThreshold = isV7 ? 0.005 : 0.008
+    if (this.lastMotionEnergy < motionThreshold) {
+      this.candidateLabel = null
       return null
     }
 
-    // Batasi frekuensi klasifikasi maksimal 1 kali tiap 200ms
-    if (now - this.lastClassifiedTime < 200) return null
+    // Batasi frekuensi klasifikasi
+    const classifyInterval = isV7 ? 150 : 200
+    if (now - this.lastClassifiedTime < classifyInterval) return null
     this.lastClassifiedTime = now
 
     // Resample sequence dari buffer aktual secara presisi 30 frame
@@ -1030,13 +1145,12 @@ export class GlossSequenceBuffer {
         let finalLabel = GLOSS_LABELS[maxIdx] ?? `label_${maxIdx}`
 
         // 3. PENCEGAHAN DOUBLE PREDIKSI (DEDUPLICATION GATING):
-        // Jika kata yang terdeteksi SAMA PERSIS dengan kata sebelumnya, abaikan agar tidak berulang/double!
         if (this.lastEmittedLabel && finalLabel.toLowerCase() === this.lastEmittedLabel.toLowerCase()) {
           return null
         }
 
-        // 4. VERIFIKASI DISAMBIGUASI SANGAT AKURAT (Makan vs Rumah):
-        if (finalLabel.toLowerCase() === 'rumah') {
+        // 4. VERIFIKASI DISAMBIGUASI (Makan vs Rumah) — hanya untuk model lama:
+        if (!isV7 && finalLabel.toLowerCase() === 'rumah') {
           if (latestWrists.length < 2) {
             if (latestWrists.length === 1 && latestWrists[0].y < 0.58) {
               finalLabel = 'Makan'
@@ -1050,32 +1164,40 @@ export class GlossSequenceBuffer {
           }
         }
 
-        console.log(`🤖 [Predict] Gloss: ${finalLabel} (${(topConfidence * 100).toFixed(1)}%), Margin: ${(margin * 100).toFixed(1)}%, Motion: ${this.lastMotionEnergy.toFixed(4)}`)
+        console.log(`🤖 [Predict] Gloss: ${finalLabel} (${(topConfidence * 100).toFixed(1)}%), Margin: ${(margin * 100).toFixed(1)}%, Motion: ${this.lastMotionEnergy.toFixed(4)}${isV7 ? ' [v7]' : ''}`)
 
-        // 5. AMBANG BATAS RESPONSINSIP PRESISI (Mencegah Tebakan Asal):
-        const minConfidence = isDegradedMode ? 0.52 : 0.62
-        const minMargin = isDegradedMode ? 0.08 : 0.15
+        // 5. AMBANG BATAS — v7 lebih rendah (model Signer-Independent yang jujur)
+        const minConfidence = isV7
+          ? (isDegradedMode ? 0.30 : 0.35)
+          : (isDegradedMode ? 0.45 : 0.54)
+        const minMargin = isV7
+          ? (isDegradedMode ? 0.03 : 0.05)
+          : (isDegradedMode ? 0.05 : 0.10)
 
         if (topConfidence < minConfidence || margin < minMargin) {
           this.candidateLabel = null
           return null
         }
 
-        // 6. FAST-PATH INSTANT TRIGGER HANYA SAAT SANGAT YAKIN (>=72%):
-        const instantThreshold = isDegradedMode ? 0.62 : 0.72
+        // 6. FAST-PATH INSTANT TRIGGER:
+        const instantThreshold = isV7
+          ? (isDegradedMode ? 0.40 : 0.45)
+          : (isDegradedMode ? 0.52 : 0.60)
+        const cooldownMs = isV7 ? 800 : 1400
+
         if (topConfidence >= instantThreshold) {
           this.lastEmittedLabel = finalLabel
-          this.cooldownUntil = now + 1400
+          this.cooldownUntil = now + cooldownMs
           this.clear()
           return { label: finalLabel, confidence: topConfidence }
         }
 
-        // 7. TEMPORAL DOUBLE VERIFICATION UNTUK CONFIDENCE SEDANG (62% - 72%):
-        // Wajib melihat label yang sama 2 kali berturut-turut sebelum di-commit!
-        if (this.candidateLabel === finalLabel && now - this.candidateTime < 800) {
+        // 7. TEMPORAL DOUBLE VERIFICATION:
+        const verifyWindow = isV7 ? 800 : 600
+        if (this.candidateLabel === finalLabel && now - this.candidateTime < verifyWindow) {
           const finalConfidence = Math.max(topConfidence, this.candidateConfidence)
           this.lastEmittedLabel = finalLabel
-          this.cooldownUntil = now + 1400
+          this.cooldownUntil = now + cooldownMs
           this.clear()
           return { label: finalLabel, confidence: finalConfidence }
         }

@@ -14,7 +14,7 @@ import {
   GlossSequenceBuffer,
   extractRawWrists,
   landmarksToVector,
-  landmarksAndPoseToVector,
+  landmarksTo164DVector,
   loadGlossModel,
   GLOSS_MODEL_VERSIONS,
   GLOSS_MODEL_INFO,
@@ -25,7 +25,7 @@ import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory, type ConversationMessage } from '../lib/api'
 import { SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
 
-const GLOSS_AUTO_FLUSH_MS = 20000 // auto-flush 20 detik jika pengguna lupa gestur stop ✊✊ dalam Mode Normal
+const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam dan lupa gestur stop 🙅 dalam Mode Normal
 
 interface SignToTextModeProps {
   onOpenDictionaryModal?: () => void
@@ -49,7 +49,6 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
   const [liveGloss, setLiveGloss] = useState<string[]>([])
   const [degraded, setDegraded] = useState(false)
   const [forcedDegraded, setForcedDegraded] = useState(false)
-
   useImperativeHandle(ref, () => ({
     disableForcedDegraded: () => setForcedDegraded(false),
   }))
@@ -65,8 +64,8 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
     energy: 0,
   })
 
-  // Status Perekaman / Deteksi Isyarat Aktif (Default True agar langsung mendeteksi)
-  const [isRecording, setIsRecording] = useState(true)
+  // Status Perekaman / Deteksi Isyarat Aktif (Default FALSE: Standby menunggu gestur mulai ✋ atau tombol)
+  const [isRecording, setIsRecording] = useState(false)
   const [currentGesture, setCurrentGesture] = useState<HandGesture>('NONE')
   const [gestureToast, setGestureToast] = useState<string | null>(null)
 
@@ -159,25 +158,28 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
                 }
               }
 
-              // 1. Deteksi Gestur MULAI (🖐️🖐️ Dua Telapak Tangan Terbuka) / STOP (✊✊ Dua Kepalan Tangan)
+              // 1. Deteksi Gestur MULAI (✋ Telapak Tangan Terbuka) / STOP (🙅 Tangan Bersilang)
               if (hasHands && handResult.landmarks) {
                 const gesture = detectTwoHandGesture(handResult.landmarks)
                 setCurrentGesture(gesture)
 
-                if (gesture === 'TWO_OPEN_PALMS') {
+                if (gesture === 'OPEN_PALM') {
                   openPalmFrames++
                   closedFistFrames = 0
-                  if (openPalmFrames >= 5 && !isRecordingRef.current) {
+                  if (openPalmFrames >= 4 && !isRecordingRef.current) {
                     recordingStartTimeRef.current = performance.now()
                     setIsRecording(true)
-                    triggerToast('🖐️🖐️ Gestur Dua Tangan Terbuka! Perekaman Kalimat Dimulai.')
+                    triggerToast('🖐️🖐️ Dua Telapak Tangan Terbuka! Perekaman Kalimat Dimulai.')
                     openPalmFrames = 0
                   }
-                } else if (gesture === 'TWO_CLOSED_FISTS') {
+                } else if (gesture === 'CROSSED_HANDS') {
                   closedFistFrames++
                   openPalmFrames = 0
                   if (closedFistFrames >= 5) {
-                    triggerToast('✊✊ Gestur Dua Kepalan Tangan! Memproses Kalimat...')
+                    setIsRecording(false)
+                    recordingStartTimeRef.current = 0
+                    buffer.clear()
+                    triggerToast('🙅 Tangan Bersilang! Memproses Kalimat...')
                     closedFistFrames = 0
                     if (collectedGlossRef.current.length > 0 && !forcedDegradedRef.current) {
                       const glossToFlush = [...collectedGlossRef.current]
@@ -196,15 +198,16 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
                 closedFistFrames = 0
               }
 
-              // 2. Klasifikasi Isyarat Real-Time (Dynamic Motion-Burst & Adaptive Cooldown)
-              if (hasHands && activeModelRef.current) {
+              // 2. Klasifikasi Isyarat Real-Time (HANYA AKTIF SAAT RECORDING / SAKELAR AKTIF)
+              if (hasHands && activeModelRef.current && isRecordingRef.current) {
                 const activeModel = activeModelRef.current
                 const expectedDim = activeModel.inputs[0]?.shape?.[2] ?? 126
-                const isPoseAnchored = expectedDim === 160 // Model v3
+                const isV7 = expectedDim === 164
                 const rawWrists = extractRawWrists(handResult)
 
-                if (isPoseAnchored) {
-                  buffer.push(landmarksAndPoseToVector(handResult, poseResult), rawWrists)
+                if (isV7) {
+                  const res7 = landmarksTo164DVector(handResult)
+                  buffer.push(res7.vector, rawWrists)
                 } else {
                   // Model v1 / v2 (126D, landmark tangan saja)
                   buffer.push(landmarksToVector(handResult), rawWrists)
@@ -253,9 +256,10 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
                   }
                 }
 
-                // Auto-flush dalam Mode Normal setelah GLOSS_AUTO_FLUSH_MS jika lupa gestur stop ✊✊
+                // Auto-flush dalam Mode Normal HANYA jika pengguna diam (isStill) setelah 60s
                 if (
                   !forcedDegradedRef.current &&
+                  isStill &&
                   recordingStartTimeRef.current > 0 &&
                   performance.now() - recordingStartTimeRef.current > GLOSS_AUTO_FLUSH_MS &&
                   collectedGlossRef.current.length > 0
@@ -353,13 +357,13 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
   const handleManualStart = () => {
     recordingStartTimeRef.current = performance.now()
     setIsRecording(true)
-    triggerToast('▶️ Deteksi Isyarat Dimulai!')
+    triggerToast('Deteksi Isyarat Dimulai!')
   }
 
   const handleManualStop = () => {
     recordingStartTimeRef.current = 0
     setIsRecording(false)
-    triggerToast('⏹️ Deteksi Dihentikan & Memproses...')
+    triggerToast('Deteksi Dihentikan & Memproses...')
     if (collectedGlossRef.current.length > 0 && !forcedDegradedRef.current) {
       const glossToFlush = [...collectedGlossRef.current]
       collectedGlossRef.current = []
@@ -367,7 +371,6 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
       void flushGloss(glossToFlush)
     }
   }
-
   return (
     <div className="flex flex-col gap-4">
       {/* Control Panel Mode Switcher & Sakelar Gestur */}
@@ -402,7 +405,7 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
             }`}
           >
             <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-rose-600' : 'bg-slate-400'}`} />
-            {isRecording ? '🔴 DETEKSI AKTIF (RECORDING)' : '⏸️ DETEKSI NON-AKTIF (STANDBY)'}
+            {isRecording ? 'DETEKSI AKTIF (RECORDING)' : 'DETEKSI NON-AKTIF (STANDBY)'}
           </span>
         </div>
 
@@ -423,11 +426,11 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
           {/* Tombol Kontrol Perekaman Isyarat */}
           {!isRecording ? (
             <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-1.5">
-              🖐️🖐️ Mulai Mendeteksi
+              Mulai Mendeteksi
             </button>
           ) : (
             <button onClick={handleManualStop} className="btn-danger text-xs px-4 py-1.5">
-              ✊✊ Selesai & Kirim
+              Selesai & Kirim
             </button>
           )}
         </div>
@@ -440,18 +443,16 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
         </div>
       )}
 
-      {/* Panduan Gestur Pemicu DUA TANGAN & Deteksi Per-Gerakan */}
+      {/* Panduan Gestur Pemicu & Deteksi Per-Gerakan */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-3 text-xs text-slate-300 border border-slate-800">
         <div className="flex items-center gap-2.5">
-          <span className="text-xl">🖐️🖐️</span>
           <div>
             <span className="font-bold text-white">MULAI:</span> Angkat Kedua Telapak Tangan Terbuka
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <span className="text-xl">✊✊</span>
           <div>
-            <span className="font-bold text-white">SELESAI:</span> Angkat Kedua Kepalan Tangan
+            <span className="font-bold text-white">SELESAI:</span> Silangkan Tangan di Depan
           </div>
         </div>
       </div>
@@ -465,17 +466,17 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
               <div className="flex items-center gap-2">
                 <span className={`h-2.5 w-2.5 rounded-full ${handDetected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
                 <span className="font-medium text-slate-300">
-                  {handDetected ? '🖐️ Tangan Terlihat' : '🚫 Tangan Tidak Terlihat'}
+                  {handDetected ? 'Tangan Terlihat' : 'Tangan Tidak Terlihat'}
                 </span>
 
-                {currentGesture === 'TWO_OPEN_PALMS' && (
+                {currentGesture === 'OPEN_PALM' && (
                   <span className="rounded bg-teal-900/80 px-2 py-0.5 font-bold text-teal-300 border border-teal-700">
-                    🖐️🖐️ DUA TANGAN TERBUKA
+                    DUA TELAPAK TANGAN TERBUKA
                   </span>
                 )}
-                {currentGesture === 'TWO_CLOSED_FISTS' && (
+                {currentGesture === 'CROSSED_HANDS' && (
                   <span className="rounded bg-rose-900/80 px-2 py-0.5 font-bold text-rose-300 border border-rose-700">
-                    ✊✊ DUA KEPALAN TANGAN
+                    TANGAN BERSILANG (SELESAI)
                   </span>
                 )}
               </div>
@@ -485,11 +486,11 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
                 <div className="flex items-center gap-1.5">
                   {!motionInfo.isStill ? (
                     <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-400 border border-emerald-500/30 animate-pulse">
-                      🏃 GERAKAN AKTIF
+                      GERAKAN AKTIF
                     </span>
                   ) : (
                     <span className="rounded-md bg-amber-500/20 px-2 py-0.5 font-bold text-amber-300 border border-amber-500/30">
-                      🧘 DIAM (Menunggu Gerakan)
+                      DIAM (Menunggu Gerakan)
                     </span>
                   )}
                 </div>
@@ -540,9 +541,9 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
           {/* Quick Label Chips Reference */}
           <div className="mt-3 rounded-2xl bg-white p-3.5 shadow-xs border border-slate-100">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-700">💡 32 Kosakata Isyarat Terdaftar:</span>
+              <span className="text-xs font-bold text-slate-700">32 Kosakata Isyarat Terdaftar:</span>
               <button onClick={onOpenDictionaryModal} className="text-[11px] font-semibold text-teal-600 hover:underline">
-                Lihat Semua (32) →
+                Lihat Semua (32) -&gt;
               </button>
             </div>
             <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">

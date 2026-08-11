@@ -242,48 +242,59 @@ export function drawHandAndPoseLandmarks(
   }
 }
 
-export type HandGesture = 'TWO_OPEN_PALMS' | 'TWO_CLOSED_FISTS' | 'NONE'
+export type HandGesture = 'OPEN_PALM' | 'CROSSED_HANDS' | 'NONE'
 
-function isSingleOpenPalm(landmarks: { x: number; y: number; z: number }[]): boolean {
+export function isSingleOpenPalm(landmarks: { x: number; y: number; z: number }[]): boolean {
   if (!landmarks || landmarks.length < 21) return false
   const wrist = landmarks[0]
   const distTip = (tipIdx: number) => Math.hypot(landmarks[tipIdx].x - wrist.x, landmarks[tipIdx].y - wrist.y)
   const distMcp = (mcpIdx: number) => Math.hypot(landmarks[mcpIdx].x - wrist.x, landmarks[mcpIdx].y - wrist.y)
 
+  const isExtended = (tip: number, mcp: number) => distTip(tip) > distMcp(mcp) * 1.05
+
   return (
-    distTip(8) > distMcp(5) * 1.15 &&
-    distTip(12) > distMcp(9) * 1.15 &&
-    distTip(16) > distMcp(13) * 1.15 &&
-    distTip(20) > distMcp(17) * 1.15
+    isExtended(8, 5) &&
+    isExtended(12, 9) &&
+    isExtended(16, 13) &&
+    isExtended(20, 17)
   )
 }
 
-function isSingleClosedFist(landmarks: { x: number; y: number; z: number }[]): boolean {
-  if (!landmarks || landmarks.length < 21) return false
-  const wrist = landmarks[0]
-  const distTip = (tipIdx: number) => Math.hypot(landmarks[tipIdx].x - wrist.x, landmarks[tipIdx].y - wrist.y)
-  const distMcp = (mcpIdx: number) => Math.hypot(landmarks[mcpIdx].x - wrist.x, landmarks[mcpIdx].y - wrist.y)
+export function areWristsCrossed(handsLandmarks: { x: number; y: number; z: number }[][]): boolean {
+  if (!handsLandmarks || handsLandmarks.length < 2) return false
+  const h1 = handsLandmarks[0]
+  const h2 = handsLandmarks[1]
+  if (!h1 || h1.length < 21 || !h2 || h2.length < 21) return false
 
-  return (
-    distTip(8) <= distMcp(5) * 1.05 &&
-    distTip(12) <= distMcp(9) * 1.05 &&
-    distTip(16) <= distMcp(13) * 1.05 &&
-    distTip(20) <= distMcp(17) * 1.05
-  )
+  const w1 = h1[0]
+  const w2 = h2[0]
+
+  // Jarak pergelangan tangan berdekatan alami (< 14% lebar layar)
+  const wristDist = Math.hypot(w1.x - w2.x, w1.y - w2.y)
+  if (wristDist > 0.14) return false
+
+  // Tangan diangkat di depan tubuh (y < 0.82)
+  if (w1.y > 0.82 || w2.y > 0.82) return false
+
+  return true
 }
 
-/** Deteksi gestur pemicu DUA TANGAN KETAT (Mulai / Stop). 1 Tangan TIDAK BISA memicu! */
+/** Deteksi gestur pemicu MULAI (✋ Telapak Tangan Terbuka) / STOP (🙅 Tangan Bersilang). */
 export function detectTwoHandGesture(handsLandmarks: { x: number; y: number; z: number }[][]): HandGesture {
-  if (!handsLandmarks || handsLandmarks.length < 2) return 'NONE'
+  if (!handsLandmarks || handsLandmarks.length === 0) return 'NONE'
 
-  const hand1 = handsLandmarks[0]
-  const hand2 = handsLandmarks[1]
-
-  if (isSingleOpenPalm(hand1) && isSingleOpenPalm(hand2)) {
-    return 'TWO_OPEN_PALMS'
+  // 1. Gestur STOP: Pergelangan tangan bersilang di depan (🙅 CROSSED_HANDS). Bebas konflik dengan isyarat Motor (✊✊).
+  if (handsLandmarks.length >= 2 && areWristsCrossed(handsLandmarks)) {
+    return 'CROSSED_HANDS'
   }
-  if (isSingleClosedFist(hand1) && isSingleClosedFist(hand2)) {
-    return 'TWO_CLOSED_FISTS'
+
+  // 2. Gestur MULAI: WAJIB DUA telapak tangan terbuka diangkat bersamaan (🖐️🖐️ OPEN_PALM). 1 tangan TIDAK BISA memicu!
+  if (
+    handsLandmarks.length >= 2 &&
+    isSingleOpenPalm(handsLandmarks[0]) &&
+    isSingleOpenPalm(handsLandmarks[1])
+  ) {
+    return 'OPEN_PALM'
   }
 
   return 'NONE'

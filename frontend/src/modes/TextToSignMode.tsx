@@ -217,7 +217,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
       {/* Header Info Banner */}
       <div className="flex flex-wrap items-center justify-between gap-3 card-dark p-4">
         <div>
-          <h2 className="text-lg font-bold">Teks / Suara → Isyarat</h2>
+          <h2 className="text-lg font-bold">Teks / Suara -&gt; Isyarat</h2>
           <p className="text-xs text-slate-300 mt-0.5">
             Ketik kata atau kalimat untuk menampilkan dan merangkai video peragaan isyarat secara langsung.
           </p>
@@ -227,7 +227,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
           onClick={onOpenDictionaryModal}
           className="flex items-center gap-1.5 rounded-xl bg-teal-500/20 px-3.5 py-2 text-xs font-semibold text-teal-300 border border-teal-500/30 hover:bg-teal-500/30 transition-all active:scale-95 shadow-xs"
         >
-          📖 Lihat 32 Label Kosakata
+          Lihat 32 Label Kosakata
         </button>
       </div>
 
@@ -245,7 +245,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
             className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 active:scale-95 transition-all"
             onClick={() => handleSubmit(input)}
           >
-            🎬 Tampilkan Video Kalimat
+            Tampilkan Video Kalimat
           </button>
           {isSpeechRecognitionSupported() && (
             <button
@@ -253,7 +253,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
               onClick={handleListen}
               title="Bicara via Mikrofon"
             >
-              🎤
+              Suara
             </button>
           )}
         </div>
@@ -282,7 +282,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div>
               <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>🎬</span> Pemutar Kalimat Isyarat
+                Pemutar Kalimat Isyarat
               </h3>
               <p className="text-xs text-slate-500">
                 Menampilkan {validTokens.length} video isyarat dari total {tokens.length} kata pada kalimat.
@@ -311,7 +311,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
                     : 'bg-slate-100 text-slate-600 border-slate-200'
                 }`}
               >
-                {isLoopSentence ? '🔁 Loop Kalimat: Aktif' : '➡️ Putar 1x'}
+                {isLoopSentence ? 'Loop Kalimat: Aktif' : 'Putar 1x'}
               </button>
             </div>
           </div>
@@ -351,14 +351,13 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
                 {/* Overlay Video Error Fallback */}
                 {videoError && (
                   <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/90 p-4 text-center">
-                    <span className="text-3xl">⚠️</span>
                     <p className="mt-2 text-sm font-bold text-rose-300">{videoError}</p>
                     <p className="mt-1 text-xs text-slate-400">File video tidak dapat dimuat atau format tidak didukung.</p>
                     <button
                       onClick={handleSkipErrorWord}
                       className="mt-4 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all"
                     >
-                      Lompati Kata Ini ➔
+                      Lompati Kata Ini -&gt;
                     </button>
                   </div>
                 )}
@@ -377,7 +376,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
                   onClick={handleRestartSentence}
                   className="flex items-center gap-1.5 rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-700 border border-slate-200 hover:bg-slate-200 active:scale-95 transition-all"
                 >
-                  ⏮️ Ulang dari Awal
+                  Ulang dari Awal
                 </button>
 
                 <button
@@ -386,14 +385,14 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
                     isPlaying ? 'bg-amber-600 hover:bg-amber-700' : 'bg-emerald-600 hover:bg-emerald-700'
                   }`}
                 >
-                  {isPlaying ? '⏸️ Jeda Kalimat' : '▶️ Lanjutkan Kalimat'}
+                  {isPlaying ? 'Jeda Kalimat' : 'Lanjutkan Kalimat'}
                 </button>
               </div>
 
               {/* TIMELINE RANGKAIAN KALIMAT (Sentence Timeline Ribbon) */}
               <div className="w-full rounded-2xl bg-slate-50 p-4 border border-slate-200">
                 <div className="flex items-center justify-between mb-2 text-xs">
-                  <span className="font-bold text-slate-700">📌 Alur Kata Kalimat:</span>
+                  <span className="font-bold text-slate-700">Alur Kata Kalimat:</span>
                   <span className="text-slate-400 text-[11px]">Klik kata untuk memutar video kata tersebut</span>
                 </div>
 
@@ -421,12 +420,11 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
                               : 'bg-slate-200/60 text-slate-400 border-transparent cursor-not-allowed'
                           }`}
                         >
-                          <span>{isActiveWord ? '▶️' : isAvailable ? '🎥' : '⚠️'}</span>
                           <span className="capitalize">{token.labelName ?? token.originalWord}</span>
                         </button>
 
                         {idx < tokens.length - 1 && (
-                          <span className="text-slate-300 text-xs font-bold">➔</span>
+                          <span className="text-slate-300 text-xs font-bold">-&gt;</span>
                         )}
                       </div>
                     )
@@ -436,7 +434,6 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-10 text-center bg-slate-50 rounded-2xl border border-slate-200">
-              <span className="text-4xl opacity-50">🚫</span>
               <p className="mt-2 text-sm font-bold text-slate-700">
                 Tidak ada kata dari kalimat ini yang terdaftar di dictionary video.
               </p>
@@ -466,7 +463,6 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
                     }`}
                   >
                     <div className="flex items-center gap-2 truncate font-semibold">
-                      <span>{token.videoUrl ? '🎥' : '⚠️'}</span>
                       <span className="truncate capitalize">{token.labelName ?? token.originalWord}</span>
                     </div>
 
@@ -496,7 +492,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span>📚</span> Ringkasan 32 Kosakata Isyarat Terdaftar
+              Ringkasan 32 Kosakata Isyarat Terdaftar
             </h3>
             <p className="text-xs text-slate-500">Klik label di bawah untuk memasukkan langsung ke pencarian video.</p>
           </div>
@@ -504,7 +500,7 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
             onClick={onOpenDictionaryModal}
             className="text-xs font-bold text-teal-600 hover:text-teal-700 hover:underline"
           >
-            Lihat Detail Modal →
+            Lihat Detail Modal -&gt;
           </button>
         </div>
 
@@ -518,7 +514,6 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
               }}
               className="flex items-center gap-1.5 rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 border border-slate-200 hover:border-teal-400 hover:bg-teal-50 hover:text-teal-800 transition-all active:scale-95 shadow-2xs"
             >
-              <span>🎥</span>
               <span>{item.label}</span>
               <span className="text-[10px] text-slate-400 font-normal">({item.category})</span>
             </button>
