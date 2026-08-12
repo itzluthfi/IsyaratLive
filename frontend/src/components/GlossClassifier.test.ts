@@ -32,16 +32,9 @@ describe('GLOSS_LABELS / GLOSS_MODEL_VERSIONS', () => {
     expect(GLOSS_LABELS).toHaveLength(32)
   })
 
-  it('only exposes model versions that actually load in the browser (v1/v2 — see PRD §15.6/§15.8 audit)', () => {
-    // v3 dikeluarkan 2026-08-10: model.json-nya diekspor dari Keras 3 dengan
-    // format inbound_nodes baru yang tidak bisa di-parse tfjs-layers 4.22
-    // ("Corrupted configuration, expected array for nodeData"). Lihat
-    // komentar di GLOSS_MODEL_VERSIONS.
-    expect(GLOSS_MODEL_VERSIONS).toEqual(['v1', 'v2'])
-    expect(GLOSS_MODEL_VERSIONS).not.toContain('v3')
-    expect(GLOSS_MODEL_VERSIONS).not.toContain('v4')
-    expect(GLOSS_MODEL_VERSIONS).not.toContain('v5')
-    expect(GLOSS_MODEL_VERSIONS).not.toContain('v6')
+  it('exposes all available model versions (v1, v2, v3, v4, v5, v7)', () => {
+    expect(GLOSS_MODEL_VERSIONS).toEqual(['v1', 'v2', 'v3', 'v4', 'v5', 'v7'])
+    expect(GLOSS_MODEL_VERSIONS).toContain('v7')
   })
 
   it('defaults the latest model to a version that is actually listed', () => {

@@ -63,7 +63,7 @@ export function ChatDisplay({ messages, liveGloss, degraded, onToggleMode }: Cha
           </div>
         )}
 
-        {messages.map((m) => {
+        {[...messages].reverse().map((m) => {
           const isFromSign = m.direction !== 'text-to-sign'
           return (
             <div key={m.id} className="card p-3.5 hover:border-slate-300 transition-colors">

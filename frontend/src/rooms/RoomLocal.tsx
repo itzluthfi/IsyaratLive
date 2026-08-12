@@ -71,9 +71,9 @@ export function RoomLocal({ onOpenDictionaryModal, wordToSign }: RoomLocalProps)
         </div>
       </div>
 
-      {/* Main Split View Grid */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 items-start">
-        <div className={panel === 'sign-to-text' ? 'space-y-4' : 'hidden'}>
+      {/* Main Split View Grid (Wide Camera: 8 cols, Chat Feed: 4 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className={panel === 'sign-to-text' ? 'lg:col-span-8 space-y-4' : 'hidden'}>
           <SignToTextMode
             ref={signModeRef}
             onOpenDictionaryModal={onOpenDictionaryModal}
@@ -81,7 +81,7 @@ export function RoomLocal({ onOpenDictionaryModal, wordToSign }: RoomLocalProps)
             onLiveStatusChange={setLiveStatus}
           />
         </div>
-        <div className={panel === 'text-to-sign' ? 'space-y-4' : 'hidden'}>
+        <div className={panel === 'text-to-sign' ? 'lg:col-span-8 space-y-4' : 'hidden'}>
           <TextToSignMode
             onOpenDictionaryModal={onOpenDictionaryModal}
             initialInput={wordToSign}
@@ -89,12 +89,14 @@ export function RoomLocal({ onOpenDictionaryModal, wordToSign }: RoomLocalProps)
           />
         </div>
 
-        <ChatDisplay
-          messages={messages}
-          liveGloss={panel === 'sign-to-text' ? liveStatus.liveGloss : undefined}
-          degraded={panel === 'sign-to-text' ? liveStatus.degraded : false}
-          onToggleMode={() => signModeRef.current?.disableForcedDegraded()}
-        />
+        <div className="lg:col-span-4">
+          <ChatDisplay
+            messages={messages}
+            liveGloss={panel === 'sign-to-text' ? liveStatus.liveGloss : undefined}
+            degraded={panel === 'sign-to-text' ? liveStatus.degraded : false}
+            onToggleMode={() => signModeRef.current?.disableForcedDegraded()}
+          />
+        </div>
       </div>
     </div>
   )

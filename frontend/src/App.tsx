@@ -25,7 +25,7 @@ function App() {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased pb-12">
       {/* Top Navigation Header */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
-        <div className="mx-auto max-w-6xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
           <button 
             onClick={() => setViewMode('landing')}
             className="flex items-center gap-3 group text-left transition-opacity hover:opacity-90"
@@ -79,7 +79,7 @@ function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto max-w-6xl px-4 py-6">
+      <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
         {viewMode === 'landing' && (
           <LandingPage
             onStartLocalRoom={() => setViewMode('local')}

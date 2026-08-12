@@ -64,8 +64,8 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
     energy: 0,
   })
 
-  // Status Perekaman / Deteksi Isyarat Aktif (Default FALSE: Standby menunggu gestur mulai ✋ atau tombol)
-  const [isRecording, setIsRecording] = useState(false)
+  // Status Perekaman / Deteksi Isyarat Aktif (Default TRUE: Langsung aktif menerjemahkan saat kamera & tangan terdeteksi)
+  const [isRecording, setIsRecording] = useState(true)
   const [currentGesture, setCurrentGesture] = useState<HandGesture>('NONE')
   const [gestureToast, setGestureToast] = useState<string | null>(null)
 
@@ -222,17 +222,16 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
 
                 if (prediction) {
                   const word = prediction.label
+                  const lowerWord = word.toLowerCase()
                   const now = performance.now()
 
-                  // STRICT ZERO-DOUBLE: Jika kata yang baru terdeteksi SAMA PERSIS dengan kata terakhir, ABAIKAN DENGAN KETAT!
-                  const isDuplicate = lastRecognizedWordRef.current.word.toLowerCase() === word.toLowerCase()
-                  if (!isDuplicate) {
-                    lastRecognizedWordRef.current = { word, time: now }
-                    setLastPrediction(prediction)
-                    triggerToast(`✨ Isyarat Terdeteksi: "${word}" (${(prediction.confidence * 100).toFixed(0)}%)`)
-
-                    if (forcedDegradedRef.current) {
-                      // MODE DEGRADASI (PER-KATA): SUARAKAN & CHAT INSTAN PER GERAKAN
+                  if (forcedDegradedRef.current) {
+                    // MODE DEGRADASI (PER-KATA): SUARAKAN & CHAT INSTAN PER GERAKAN
+                    const isDuplicate = lastRecognizedWordRef.current.word.toLowerCase() === lowerWord
+                    if (!isDuplicate) {
+                      lastRecognizedWordRef.current = { word, time: now }
+                      setLastPrediction(prediction)
+                      triggerToast(`✨ Isyarat Terdeteksi: "${word}" (${(prediction.confidence * 100).toFixed(0)}%)`)
                       setLiveGloss([word])
 
                       const message: ConversationMessage = {
@@ -244,14 +243,19 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
                       }
                       onAddMessage(message)
                       speak(word)
-                    } else {
-                      // MODE NORMAL (KALIMAT): Kumpulkan kata unik (bebas ganda) & suarakan
-                      const lastCollected = collectedGlossRef.current[collectedGlossRef.current.length - 1]
-                      if (!lastCollected || lastCollected.toLowerCase() !== word.toLowerCase()) {
-                        collectedGlossRef.current.push(word)
-                        setLiveGloss([...collectedGlossRef.current])
-                        speak(word)
-                      }
+                    }
+                  } else {
+                    // MODE NORMAL (KALIMAT): Kumpulkan kata unik (bebas ganda dalam 1 sesi kalimat). Kata yang sudah muncul tidak boleh memicu notifikasi / suara sampai Selesai & Kirim.
+                    const alreadyInSentence = collectedGlossRef.current.some(
+                      (w) => w.toLowerCase() === lowerWord
+                    )
+                    if (!alreadyInSentence) {
+                      lastRecognizedWordRef.current = { word, time: now }
+                      collectedGlossRef.current.push(word)
+                      setLiveGloss([...collectedGlossRef.current])
+                      setLastPrediction(prediction)
+                      triggerToast(`✨ Isyarat Terdeteksi: "${word}" (${(prediction.confidence * 100).toFixed(0)}%)`)
+                      speak(word)
                     }
                   }
                 }

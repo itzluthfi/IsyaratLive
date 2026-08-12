@@ -81,60 +81,46 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
 
   const activeToken = validTokens[activeValidIndex]
 
-  // Sakelar Pemutar Video Seamless & Cross-Dissolve Morphing
+  const transitioningRef = useRef<boolean>(false)
+
+  // Preload video kata berikutnya ke idle player
   useEffect(() => {
-    if (!activeToken?.videoUrl) return
+    if (validTokens.length === 0) return
 
-    setVideoError(null)
+    const currentToken = validTokens[activeValidIndex]
+    const nextTokenIndex = (activeValidIndex + 1) % validTokens.length
+    const nextToken = validTokens[nextTokenIndex]
 
-    // Player yang akan dipakai untuk kata baru
-    const nextPlayerIndex = activePlayerIndex === 0 ? 1 : 0
-    const nextVid = nextPlayerIndex === 0 ? videoRef0.current : videoRef1.current
-    const currVid = activePlayerIndex === 0 ? videoRef0.current : videoRef1.current
+    const activeVid = activePlayerIndex === 0 ? videoRef0.current : videoRef1.current
+    const idleVid = activePlayerIndex === 0 ? videoRef1.current : videoRef0.current
 
-    if (nextVid) {
-      nextVid.src = activeToken.videoUrl
-      nextVid.muted = true
-      nextVid.playbackRate = playbackSpeed
-      nextVid.currentTime = 0
-
+    // Set active video src jika belum sesuai
+    if (activeVid && currentToken?.videoUrl) {
+      const activeSrc = new URL(currentToken.videoUrl, window.location.href).href
+      if (activeVid.src !== activeSrc) {
+        activeVid.src = currentToken.videoUrl
+        activeVid.currentTime = 0
+      }
+      activeVid.playbackRate = playbackSpeed
       if (isPlaying) {
-        nextVid
-          .play()
-          .then(() => {
-            // Aktifkan transisi cross-fade 300ms yang halus
-            setActivePlayerIndex(nextPlayerIndex)
-            setTimeout(() => {
-              if (currVid && currVid !== nextVid) {
-                currVid.pause()
-              }
-            }, 250)
-          })
-          .catch((err) => {
-            console.warn('Seamless play notice:', err)
-            setActivePlayerIndex(nextPlayerIndex)
-          })
-      } else {
-        nextVid.pause()
-        setActivePlayerIndex(nextPlayerIndex)
+        activeVid.play().catch(() => {})
       }
     }
 
-    // Pre-warm kata berikutnya ke player cadangan agar siap putar instan
-    const upcomingToken = validTokens[activeValidIndex + 1]
-    if (upcomingToken?.videoUrl) {
-      setTimeout(() => {
-        const idleVid = nextPlayerIndex === 0 ? videoRef1.current : videoRef0.current
-        if (idleVid) {
-          idleVid.src = upcomingToken.videoUrl!
-          idleVid.muted = true
-          idleVid.load()
-        }
-      }, 350)
+    // Preload video berikutnya ke idle player
+    if (idleVid && nextToken?.videoUrl && (validTokens.length > 1 || isLoopSentence)) {
+      const nextSrc = new URL(nextToken.videoUrl, window.location.href).href
+      if (idleVid.src !== nextSrc) {
+        idleVid.src = nextToken.videoUrl
+        idleVid.preload = 'auto'
+        idleVid.load()
+      }
     }
-  }, [activeValidIndex, activeToken?.videoUrl])
 
-  // Respon perubahan status Play/Pause atau Speed
+    transitioningRef.current = false
+  }, [activeValidIndex, validTokens, isLoopSentence, playbackSpeed, isPlaying, activePlayerIndex])
+
+  // Respon perubahan status Play/Pause atau Speed secara manual
   useEffect(() => {
     const activeVid = activePlayerIndex === 0 ? videoRef0.current : videoRef1.current
     if (!activeVid) return
@@ -148,15 +134,50 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
     }
   }, [isPlaying, playbackSpeed, activePlayerIndex])
 
-  // Transisi berurutan ke kata berikutnya saat video 1 kata selesai
-  const handleVideoEnded = () => {
+  // Transisi awal (Early-Start 180ms): Pemicu pemutaran video berikutnya 180ms sebelum video 1 selesai untuk pergantian tanpa jeda
+  const handleTimeUpdate = (playerIndex: number) => {
+    if (playerIndex !== activePlayerIndex) return
+    const activeVid = playerIndex === 0 ? videoRef0.current : videoRef1.current
+    if (!activeVid || !activeVid.duration || transitioningRef.current) return
+
+    const timeLeft = activeVid.duration - activeVid.currentTime
+    if (timeLeft <= 0.18 && timeLeft > 0) {
+      const total = validTokensRef.current.length
+      if (total <= 1 && !isLoopRef.current) return
+
+      transitioningRef.current = true
+      const nextIndex = activeIndexRef.current < total - 1 ? activeIndexRef.current + 1 : isLoopRef.current ? 0 : -1
+
+      if (nextIndex !== -1) {
+        const idlePlayerIndex = playerIndex === 0 ? 1 : 0
+        const idleVid = idlePlayerIndex === 0 ? videoRef0.current : videoRef1.current
+        if (idleVid) {
+          idleVid.playbackRate = playbackSpeed
+          idleVid.play().catch(() => {})
+        }
+        setActivePlayerIndex(idlePlayerIndex)
+        setActiveValidIndex(nextIndex)
+      } else {
+        setIsPlaying(false)
+      }
+    }
+  }
+
+  // Fallback saat video benar-benar berakhir
+  const handleVideoEnded = (playerIndex: number) => {
+    if (playerIndex !== activePlayerIndex || transitioningRef.current) return
+
     const total = validTokensRef.current.length
     if (total === 0) return
 
     if (activeIndexRef.current < total - 1) {
+      const idlePlayerIndex = playerIndex === 0 ? 1 : 0
+      setActivePlayerIndex(idlePlayerIndex)
       setActiveValidIndex((prev) => prev + 1)
     } else {
       if (isLoopRef.current) {
+        const idlePlayerIndex = playerIndex === 0 ? 1 : 0
+        setActivePlayerIndex(idlePlayerIndex)
         setActiveValidIndex(0)
       } else {
         setIsPlaying(false)
@@ -167,16 +188,23 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
   // Lompati kata jika terjadi error pada video
   const handleSkipErrorWord = () => {
     setVideoError(null)
-    handleVideoEnded()
+    handleVideoEnded(activePlayerIndex)
   }
+
+  const [isListening, setIsListening] = useState<boolean>(false)
 
   async function handleListen() {
     try {
+      setIsListening(true)
       const transcript = await listenOnce()
-      setInput(transcript)
-      handleSubmit(transcript)
+      if (transcript) {
+        setInput(transcript)
+        handleSubmit(transcript)
+      }
     } catch (err) {
       console.error('STT gagal:', err)
+    } finally {
+      setIsListening(false)
     }
   }
 
@@ -249,14 +277,31 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
           </button>
           {isSpeechRecognitionSupported() && (
             <button
-              className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 active:scale-95 transition-all"
+              disabled={isListening}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all border active:scale-95 ${
+                isListening
+                  ? 'bg-rose-600 text-white border-rose-500 shadow-md animate-pulse ring-2 ring-rose-400/40'
+                  : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+              }`}
               onClick={handleListen}
               title="Bicara via Mikrofon"
             >
-              Suara
+              <span className={`h-2 w-2 rounded-full ${isListening ? 'bg-white animate-ping' : 'bg-rose-500'}`} />
+              <span>{isListening ? 'Mendengarkan...' : 'Suara (Mic)'}</span>
             </button>
           )}
         </div>
+
+        {/* Banner Indikator Suara Aktif */}
+        {isListening && (
+          <div className="flex items-center gap-2.5 rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 border border-rose-200 shadow-xs animate-pulse">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600" />
+            </span>
+            <span>🎙️ Mikrofon Aktif! Silakan bicara kalimat Anda sekarang...</span>
+          </div>
+        )}
 
         {/* Quick Sample Chips */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
@@ -323,11 +368,12 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
                 {/* Player 0 */}
                 <video
                   ref={videoRef0}
-                  controls
+                  controlsList="nodownload"
                   muted
                   preload="auto"
                   playsInline
-                  onEnded={handleVideoEnded}
+                  onTimeUpdate={() => handleTimeUpdate(0)}
+                  onEnded={() => handleVideoEnded(0)}
                   onError={() => setVideoError(`Gagal memutar video kata "${activeToken.labelName ?? activeToken.originalWord}"`)}
                   className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ease-in-out ${
                     activePlayerIndex === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
@@ -337,11 +383,12 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
                 {/* Player 1 */}
                 <video
                   ref={videoRef1}
-                  controls
+                  controlsList="nodownload"
                   muted
                   preload="auto"
                   playsInline
-                  onEnded={handleVideoEnded}
+                  onTimeUpdate={() => handleTimeUpdate(1)}
+                  onEnded={() => handleVideoEnded(1)}
                   onError={() => setVideoError(`Gagal memutar video kata "${activeToken.labelName ?? activeToken.originalWord}"`)}
                   className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ease-in-out ${
                     activePlayerIndex === 1 ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'

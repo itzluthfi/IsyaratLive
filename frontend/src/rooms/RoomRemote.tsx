@@ -402,7 +402,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                 Belum ada percakapan. Mulai peragakan isyarat atau ketik pesan.
               </div>
             )}
-            {messages.map((m) => (
+            {[...messages].reverse().map((m) => (
               <div
                 key={m.id}
                 className={`rounded-lg border p-2.5 text-xs transition-colors ${

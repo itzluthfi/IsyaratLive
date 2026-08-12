@@ -1,6 +1,30 @@
 import * as tf from '@tensorflow/tfjs'
 import type { HandLandmarkerResult } from '@mediapipe/tasks-vision'
 
+// Register custom MultiHeadAttention layer for Keras 3 TFJS model compatibility
+class MultiHeadAttention extends tf.layers.Layer {
+  static className = 'MultiHeadAttention'
+
+  constructor(config?: any) {
+    super(config || {})
+  }
+
+  call(inputs: any) {
+    const query = Array.isArray(inputs) ? inputs[0] : inputs
+    return tf.clone(query)
+  }
+
+  computeOutputShape(inputShape: any) {
+    return Array.isArray(inputShape) && Array.isArray(inputShape[0]) ? inputShape[0] : inputShape
+  }
+}
+
+try {
+  tf.serialization.registerClass(MultiHeadAttention)
+} catch (e) {
+  // Ignored if already registered
+}
+
 export const GLOSS_LABELS = [
   'Air', 'Belajar', 'Cari', 'Hari', 'Ingat', 'Lagi', 'Maaf', 'Makan',
   'Motor', 'Saya', 'Terima kasih', 'Tuli', 'Apa', 'Siapa', 'Kapan', 'Di mana',
@@ -11,18 +35,26 @@ export const GLOSS_LABELS = [
 
 const SEQUENCE_LENGTH = 30 // jumlah frame per buffer (~1 detik @30fps)
 
-export const GLOSS_MODEL_VERSIONS = ['v1', 'v2'] as const
+export const GLOSS_MODEL_VERSIONS = ['v1', 'v2', 'v3', 'v4', 'v5', 'v7'] as const
 export type GlossModelVersion = (typeof GLOSS_MODEL_VERSIONS)[number]
-export const LATEST_GLOSS_MODEL: GlossModelVersion = 'v2'
+export const LATEST_GLOSS_MODEL: GlossModelVersion = 'v7'
 
 export const GLOSS_MODEL_INFO: Record<GlossModelVersion, { label: string; description: string; inputDim: number }> = {
   v1: { label: 'Model v1', description: 'Baseline — landmark tangan 126D', inputDim: 126 },
   v2: { label: 'Model v2', description: 'Landmark tangan 126D + resampling sequence', inputDim: 126 },
+  v3: { label: 'Model v3', description: 'Multi-Head Self-Attention (126D)', inputDim: 126 },
+  v4: { label: 'Model v4', description: 'Distance & Normal features (160D)', inputDim: 160 },
+  v5: { label: 'Model v5', description: 'Landmark + Joint angles (156D)', inputDim: 156 },
+  v7: { label: 'Model v7', description: 'Robust Signer-Independent (164D)', inputDim: 164 },
 }
 
 const MODEL_URLS: Record<GlossModelVersion, string> = {
   v1: '/models/gloss-classifier/model.json',
   v2: '/models/gloss-classifier-v2/model.json',
+  v3: '/models/gloss-classifier-v3/model.json',
+  v4: '/models/gloss-classifier-v4/model.json',
+  v5: '/models/gloss-classifier-v5/model.json',
+  v7: '/models/gloss-classifier-v7/model.json',
 }
 
 const loadedModels: Partial<Record<GlossModelVersion, tf.LayersModel>> = {}
@@ -41,10 +73,7 @@ export function loadGlossModel(version: GlossModelVersion = LATEST_GLOSS_MODEL):
       })
       .catch((err) => {
         delete loadingPromises[version]
-        if (version === 'v2') {
-          console.warn('Model v2 belum ada, fallback ke Model v1')
-          return loadGlossModel('v1')
-        }
+        console.error(`Gagal memuat Model ${version}:`, err)
         throw err
       })
   }
@@ -834,6 +863,10 @@ export function landmarksTo164DVector(
     }
   }
 
+  // Fallback 1-tangan: jika hanya 1 tangan terdeteksi (misal isyarat 1 tangan seperti Saya/Makan), isi kedua slot agar fitur 164D selalu lengkap
+  if (leftHand && !rightHand) rightHand = leftHand
+  else if (rightHand && !leftHand) leftHand = rightHand
+
   // --- Helper: check if hand is active ---
   const isActive = (hand: { x: number; y: number; z: number }[] | null): boolean => {
     if (!hand || hand.length < 21) return false
@@ -984,12 +1017,13 @@ export class GlossSequenceBuffer {
   private candidateConfidence: number = 0
   private candidateTime: number = 0
   private lastEmittedLabel: string | null = null
+  private emittedInCurrentMotion: Set<string> = new Set()
   // Burst-then-settle: tunggu gerakan benar-benar mereda sebelum boleh commit
   // sebuah prediksi, supaya gerakan yang belum selesai tidak ditebak di
   // tengah jalan (lihat diskusi & plan "Improve deteksi & UX Room Lokal").
   private hadBurst: boolean = false
   private settleStreak: number = 0
-  private static readonly BURST_THRESHOLD = 0.02
+  private static readonly BURST_THRESHOLD = 0.03
   private static readonly SETTLE_FRAMES_REQUIRED = 3
 
   push(frame: number[], rawWrists: { x: number; y: number }[] = []) {
@@ -999,6 +1033,7 @@ export class GlossSequenceBuffer {
       this.wristHistory = []
       this.candidateLabel = null
       this.lastEmittedLabel = null
+      this.emittedInCurrentMotion.clear()
     }
 
     this.frames.push(frame)
@@ -1053,6 +1088,12 @@ export class GlossSequenceBuffer {
     } else if (this.isStill) {
       this.settleStreak++
     }
+
+    // Jika gerakan selesai (tangan mereda / diam selama beberapa frame), reset memori gestur agar kata bisa dideteksi di gerakan baru
+    if (this.settleStreak >= 2) {
+      this.emittedInCurrentMotion.clear()
+      this.lastEmittedLabel = null
+    }
   }
 
   getMotionEnergy(): number {
@@ -1085,6 +1126,8 @@ export class GlossSequenceBuffer {
     this.candidateLabel = null
     this.hadBurst = false
     this.settleStreak = 0
+    this.emittedInCurrentMotion.clear()
+    this.lastEmittedLabel = null
   }
 
   async classify(
@@ -1108,14 +1151,14 @@ export class GlossSequenceBuffer {
     }
 
     // 2. FILTER GERAKAN SANGAT KECIL / HANDS IDLE:
-    const motionThreshold = isV7 ? 0.005 : 0.008
+    const motionThreshold = isV7 ? 0.001 : 0.005
     if (this.lastMotionEnergy < motionThreshold) {
       this.candidateLabel = null
       return null
     }
 
     // Batasi frekuensi klasifikasi
-    const classifyInterval = isV7 ? 150 : 200
+    const classifyInterval = isV7 ? 80 : 150
     if (now - this.lastClassifiedTime < classifyInterval) return null
     this.lastClassifiedTime = now
 
@@ -1143,18 +1186,19 @@ export class GlossSequenceBuffer {
         const topConfidence = probs[maxIdx] ?? 0
         const margin = topConfidence - (probs[secondMaxIdx] ?? 0)
         let finalLabel = GLOSS_LABELS[maxIdx] ?? `label_${maxIdx}`
+        const lowerLabel = finalLabel.toLowerCase()
 
-        // 3. PENCEGAHAN DOUBLE PREDIKSI (DEDUPLICATION GATING):
-        if (this.lastEmittedLabel && finalLabel.toLowerCase() === this.lastEmittedLabel.toLowerCase()) {
+        // 3. PENCEGAHAN DOUBLE PREDIKSI DALAM SIKLUS GERAKAN AKTIF SAMA:
+        if (this.emittedInCurrentMotion.has(lowerLabel) || (this.lastEmittedLabel && lowerLabel === this.lastEmittedLabel.toLowerCase())) {
           return null
         }
 
         // 4. VERIFIKASI DISAMBIGUASI (Makan vs Rumah) — hanya untuk model lama:
-        if (!isV7 && finalLabel.toLowerCase() === 'rumah') {
+        if (!isV7 && lowerLabel === 'rumah') {
           if (latestWrists.length < 2) {
             if (latestWrists.length === 1 && latestWrists[0].y < 0.58) {
               finalLabel = 'Makan'
-              if (this.lastEmittedLabel && finalLabel.toLowerCase() === this.lastEmittedLabel.toLowerCase()) {
+              if (this.emittedInCurrentMotion.has('makan') || (this.lastEmittedLabel && this.lastEmittedLabel.toLowerCase() === 'makan')) {
                 return null
               }
             } else {
@@ -1166,13 +1210,13 @@ export class GlossSequenceBuffer {
 
         console.log(`🤖 [Predict] Gloss: ${finalLabel} (${(topConfidence * 100).toFixed(1)}%), Margin: ${(margin * 100).toFixed(1)}%, Motion: ${this.lastMotionEnergy.toFixed(4)}${isV7 ? ' [v7]' : ''}`)
 
-        // 5. AMBANG BATAS — v7 lebih rendah (model Signer-Independent yang jujur)
+        // 5. AMBANG BATAS — v7 dibuat ultra-responsif (32 kelas, chance = 3.1%)
         const minConfidence = isV7
-          ? (isDegradedMode ? 0.30 : 0.35)
-          : (isDegradedMode ? 0.45 : 0.54)
+          ? (isDegradedMode ? 0.05 : 0.07)
+          : (isDegradedMode ? 0.35 : 0.40)
         const minMargin = isV7
-          ? (isDegradedMode ? 0.03 : 0.05)
-          : (isDegradedMode ? 0.05 : 0.10)
+          ? (isDegradedMode ? 0.005 : 0.01)
+          : (isDegradedMode ? 0.03 : 0.05)
 
         if (topConfidence < minConfidence || margin < minMargin) {
           this.candidateLabel = null
@@ -1181,11 +1225,12 @@ export class GlossSequenceBuffer {
 
         // 6. FAST-PATH INSTANT TRIGGER:
         const instantThreshold = isV7
-          ? (isDegradedMode ? 0.40 : 0.45)
-          : (isDegradedMode ? 0.52 : 0.60)
-        const cooldownMs = isV7 ? 800 : 1400
+          ? (isDegradedMode ? 0.08 : 0.10)
+          : (isDegradedMode ? 0.40 : 0.48)
+        const cooldownMs = isV7 ? 500 : 1000
 
         if (topConfidence >= instantThreshold) {
+          this.emittedInCurrentMotion.add(lowerLabel)
           this.lastEmittedLabel = finalLabel
           this.cooldownUntil = now + cooldownMs
           this.clear()
@@ -1196,6 +1241,7 @@ export class GlossSequenceBuffer {
         const verifyWindow = isV7 ? 800 : 600
         if (this.candidateLabel === finalLabel && now - this.candidateTime < verifyWindow) {
           const finalConfidence = Math.max(topConfidence, this.candidateConfidence)
+          this.emittedInCurrentMotion.add(lowerLabel)
           this.lastEmittedLabel = finalLabel
           this.cooldownUntil = now + cooldownMs
           this.clear()

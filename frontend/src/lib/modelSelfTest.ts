@@ -4,6 +4,7 @@ import {
   loadGlossModel,
   landmarksToVector,
   landmarksAndPoseToVector,
+  landmarksTo164DVector,
   resampleSequenceTS,
   GLOSS_LABELS,
   GLOSS_MODEL_INFO,
@@ -29,13 +30,19 @@ export interface SelfTestResult {
   perItem: SelfTestItemResult[]
 }
 
+// Timestamp strictly-increasing global untuk MediaPipe WASM (mencegah Packet timestamp mismatch error)
+let globalSelfTestTimestamp = Math.floor(performance.now() * 1000) + 1000000
+
 async function extractSequenceFromVideo(
   video: HTMLVideoElement,
-  useEnabledPose: boolean,
+  version: GlossModelVersion,
 ): Promise<number[][]> {
   const handLandmarker = await getHandLandmarker()
-  const poseLandmarker = useEnabledPose ? await getPoseLandmarker() : null
+  const expectedDim = GLOSS_MODEL_INFO[version].inputDim
+  const usesPose = expectedDim === 160
+  const isV7 = expectedDim === 164
 
+  const poseLandmarker = usesPose ? await getPoseLandmarker() : null
   const duration = video.duration || 1
   const frames: number[][] = []
 
@@ -43,14 +50,22 @@ async function extractSequenceFromVideo(
     const t = (i / (FRAME_SAMPLES - 1)) * duration * 0.98
     await seekTo(video, t)
 
-    // Timestamp sintetis strictly-increasing untuk API detectForVideo (bukan real playback time,
-    // hanya dipakai internal MediaPipe untuk tracking antar-frame — tidak memengaruhi hasil landmark).
-    const timestamp = i * 33
+    // Timestamp strictly-increasing global untuk API detectForVideo
+    globalSelfTestTimestamp += 33
+    const timestamp = globalSelfTestTimestamp
+
     const handResult = await detectFrame(handLandmarker, video, timestamp)
     const poseResult = poseLandmarker ? await detectPoseFrame(poseLandmarker, video, timestamp).catch(() => null) : null
 
     if (handResult.landmarks && handResult.landmarks.length > 0) {
-      const vector = useEnabledPose ? landmarksAndPoseToVector(handResult, poseResult) : landmarksToVector(handResult)
+      let vector: number[]
+      if (isV7) {
+        vector = landmarksTo164DVector(handResult).vector
+      } else if (usesPose) {
+        vector = landmarksAndPoseToVector(handResult, poseResult)
+      } else {
+        vector = landmarksToVector(handResult)
+      }
       frames.push(vector)
     }
   }
@@ -60,10 +75,20 @@ async function extractSequenceFromVideo(
 
 function seekTo(video: HTMLVideoElement, time: number): Promise<void> {
   return new Promise((resolve) => {
+    if (Math.abs(video.currentTime - time) < 0.01) {
+      resolve()
+      return
+    }
+    let timer: ReturnType<typeof setTimeout> | null = null
     const onSeeked = () => {
+      if (timer) clearTimeout(timer)
       video.removeEventListener('seeked', onSeeked)
       resolve()
     }
+    timer = setTimeout(() => {
+      video.removeEventListener('seeked', onSeeked)
+      resolve()
+    }, 500)
     video.addEventListener('seeked', onSeeked)
     video.currentTime = time
   })
@@ -81,23 +106,11 @@ function loadVideo(url: string): Promise<HTMLVideoElement> {
   })
 }
 
-/**
- * Uji akurasi kasar (sanity check) satu versi model terhadap 32 video
- * dictionary yang sudah ada di frontend/public/dictionary/ sebagai
- * ground-truth pengganti (bukan test set independen yang dipisah sejak
- * training — lihat batasan di PRD §15.6/§15.7). Berguna untuk mengecek
- * model benar-benar bisa membedakan label yang berbeda, BUKAN pengganti
- * evaluasi Signer-Independent yang seharusnya dilakukan saat training di
- * ml/. Fungsi ini TIDAK mengubah GlossSequenceBuffer atau logika deteksi
- * live sama sekali — hanya memanggil model.predict() langsung secara batch.
- */
 export async function runModelSelfTest(
   version: GlossModelVersion,
   onProgress?: (done: number, total: number, currentLabel: string) => void,
 ): Promise<SelfTestResult> {
   const model = await loadGlossModel(version)
-  const usesPose = GLOSS_MODEL_INFO[version].inputDim === 160
-
   const perItem: SelfTestItemResult[] = []
   const items = SIGN_DICTIONARY_DATA
 
@@ -107,7 +120,7 @@ export async function runModelSelfTest(
 
     try {
       const video = await loadVideo(item.videoUrl)
-      const frames = await extractSequenceFromVideo(video, usesPose)
+      const frames = await extractSequenceFromVideo(video, version)
 
       if (frames.length < 4) {
         perItem.push({ label: item.label, predicted: '(tangan tak terdeteksi)', confidence: 0, correct: false })

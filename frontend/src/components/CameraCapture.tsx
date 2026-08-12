@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useState, useImperativeHandle, useRef } from 'react'
+import { Camera, RefreshCw, Lock, SwitchCamera } from 'lucide-react'
 
 interface CameraCaptureProps {
   onReady?: (video: HTMLVideoElement) => void
@@ -111,9 +112,9 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
       <div className="flex flex-col gap-2">
         {/* Peringatan Secure Context jika dibuka lewat http://<ip-wifi> di HP */}
         {!isSecureCtx && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-2xl bg-amber-50 p-3.5 text-xs text-amber-900 border border-amber-300 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 rounded-2xl bg-amber-50 p-3.5 text-xs text-amber-900 border border-amber-300 shadow-xs">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🔒</span>
+              <Lock className="w-4 h-4 shrink-0 text-amber-700" />
               <div>
                 <p className="font-bold">Akses Kamera di HP membutuhkan Protokol HTTPS!</p>
                 <p className="text-[11px] text-amber-700">
@@ -123,9 +124,9 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
             </div>
             <button
               onClick={handleSwitchHttps}
-              className="w-full sm:w-auto shrink-0 rounded-xl bg-amber-600 px-3.5 py-1.5 font-bold text-white shadow-xs hover:bg-amber-700 active:scale-95 transition-all text-xs"
+              className="w-full sm:w-auto shrink-0 rounded-xl bg-amber-600 px-3.5 py-1.5 font-bold text-white shadow-2xs hover:bg-amber-700 active:scale-95 transition-all text-xs flex items-center gap-1.5"
             >
-              🔐 Beralih ke HTTPS
+              <Lock className="w-3.5 h-3.5" /> Beralih ke HTTPS
             </button>
           </div>
         )}
@@ -158,8 +159,8 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
           {/* Overlays jika error atau izin kamera ditolak */}
           {!isLoading && error && (
             <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/90 p-5 text-center text-white">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-400 text-2xl mb-2 border border-rose-500/30">
-                📷
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-400 mb-2 border border-rose-500/30">
+                <Camera className="w-6 h-6" />
               </div>
               <h3 className="text-sm font-bold text-rose-300">Izin Kamera Diperlukan</h3>
               <p className="mt-1 max-w-sm text-xs text-slate-300">{error}</p>
@@ -167,16 +168,16 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                 <button
                   onClick={() => startCamera(facingMode)}
-                  className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all"
+                  className="rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all flex items-center gap-1.5"
                 >
-                  🔄 Coba Minta Izin Kamera Lagi
+                  <RefreshCw className="w-3.5 h-3.5" /> Coba Minta Izin Kamera Lagi
                 </button>
                 {!isSecureCtx && (
                   <button
                     onClick={handleSwitchHttps}
-                    className="rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-amber-500 active:scale-95 transition-all"
+                    className="rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-amber-500 active:scale-95 transition-all flex items-center gap-1.5"
                   >
-                    🔐 Beralih ke HTTPS (Wajib untuk HP)
+                    <Lock className="w-3.5 h-3.5" /> Beralih ke HTTPS
                   </button>
                 )}
               </div>
@@ -191,7 +192,8 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
                 className="flex items-center gap-1.5 rounded-xl bg-slate-900/80 px-3 py-1.5 text-xs font-bold text-white backdrop-blur border border-slate-700 hover:bg-slate-800 active:scale-95 transition-all shadow-md"
                 title="Ganti Kamera Depan / Belakang"
               >
-                🔄 {facingMode === 'user' ? 'Kamera Depan' : 'Kamera Belakang'}
+                <SwitchCamera className="w-3.5 h-3.5" />
+                {facingMode === 'user' ? 'Kamera Depan' : 'Kamera Belakang'}
               </button>
             </div>
           )}

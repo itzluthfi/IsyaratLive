@@ -19,17 +19,20 @@ export function AccuracyTestPanel({ isOpen, onClose }: AccuracyTestPanelProps) {
   const [running, setRunning] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number; label: string } | null>(null)
   const [result, setResult] = useState<SelfTestResult | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   if (!isOpen) return null
 
   async function handleRun() {
     setRunning(true)
     setResult(null)
+    setErrorMessage(null)
     try {
       const res = await runModelSelfTest(version, (done, total, label) => setProgress({ done, total, label }))
       setResult(res)
     } catch (err) {
       console.error('Uji akurasi gagal:', err)
+      setErrorMessage(err instanceof Error ? err.message : String(err))
     } finally {
       setRunning(false)
       setProgress(null)
@@ -63,7 +66,11 @@ export function AccuracyTestPanel({ isOpen, onClose }: AccuracyTestPanelProps) {
                 {GLOSS_MODEL_INFO[v].label}
               </button>
             ))}
-            <button onClick={handleRun} disabled={running} className="btn-primary ml-auto text-sm">
+            <button
+              onClick={handleRun}
+              disabled={running}
+              className="btn-primary ml-auto text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {running ? 'Menguji…' : 'Jalankan Uji'}
             </button>
           </div>
@@ -79,6 +86,18 @@ export function AccuracyTestPanel({ isOpen, onClose }: AccuracyTestPanelProps) {
               <p className="mt-1 text-xs text-slate-500">
                 Menguji {progress.done}/{progress.total} — {progress.label}
               </p>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-3">
+              <div>
+                <strong className="font-semibold block text-sm mb-0.5">Gagal Menjalankan Uji Akurasi</strong>
+                <span>{errorMessage}</span>
+              </div>
+              <button onClick={handleRun} className="btn-secondary text-xs bg-white text-rose-700 hover:bg-rose-100 border-rose-300 shrink-0">
+                Coba Lagi
+              </button>
             </div>
           )}
 
