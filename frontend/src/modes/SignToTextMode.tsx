@@ -397,7 +397,7 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
 
           {/* Mode Switcher */}
           <span className={forcedDegraded ? 'badge-warning' : 'badge-active'}>
-            {forcedDegraded ? 'Mode Instan Per Kata' : 'Mode Kalimat (LLM)'}
+            {forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat Otomatis'}
           </span>
 
           {/* Status Sakelar Detection */}
@@ -409,7 +409,7 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
             }`}
           >
             <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-rose-600' : 'bg-slate-400'}`} />
-            {isRecording ? 'DETEKSI AKTIF (RECORDING)' : 'DETEKSI NON-AKTIF (STANDBY)'}
+            {isRecording ? 'PENERJEMAH AKTIF' : 'PENERJEMAH PAUS'}
           </span>
         </div>
 
@@ -419,12 +419,12 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
             onClick={() => setForcedDegraded(!forcedDegraded)}
             className={forcedDegraded ? 'btn-primary text-xs px-3.5 py-1.5' : 'btn-secondary text-xs px-3.5 py-1.5'}
           >
-            {forcedDegraded ? 'Aktifkan Mode Kalimat' : 'Sakelar: Instan Per Kata'}
+            {forcedDegraded ? 'Mode Kalimat Otomatis' : 'Mode Kata Langsung'}
           </button>
 
           {/* Tombol Lihat Dictionary */}
           <button onClick={onOpenDictionaryModal} className="btn-secondary text-xs px-3 py-1.5">
-            32 Label Isyarat
+            Kamus 32 Kata
           </button>
 
           {/* Tombol Kontrol Perekaman Isyarat */}

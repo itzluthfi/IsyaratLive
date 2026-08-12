@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
+import { Home, Video, PhoneCall, BookOpen, BarChart2 } from 'lucide-react'
 import { RoomLocal } from './rooms/RoomLocal'
 import { DictionaryModal } from './components/DictionaryModal'
 import { LandingPage } from './components/LandingPage'
@@ -39,7 +40,7 @@ function App() {
                 <span className="badge-active text-[10px] py-0 px-2">v2.4 Ready</span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
-                Penerjemah BISINDO Real-Time
+                Penerjemah Bahasa Isyarat
               </p>
             </div>
           </button>
@@ -47,32 +48,32 @@ function App() {
           <div className="flex flex-wrap items-center gap-2">
             <nav className="flex gap-1 rounded-lg bg-slate-100/80 p-1 border border-slate-200/80">
               <button
-                className={viewMode === 'landing' ? 'tab-pill-active' : 'tab-pill'}
+                className={viewMode === 'landing' ? 'tab-pill-active flex items-center gap-1.5' : 'tab-pill flex items-center gap-1.5'}
                 onClick={() => setViewMode('landing')}
               >
-                Beranda
+                <Home className="w-3.5 h-3.5" /> Beranda
               </button>
               <button
-                className={viewMode === 'local' ? 'tab-pill-active' : 'tab-pill'}
+                className={viewMode === 'local' ? 'tab-pill-active flex items-center gap-1.5' : 'tab-pill flex items-center gap-1.5'}
                 onClick={() => setViewMode('local')}
               >
-                Room Lokal
+                <Video className="w-3.5 h-3.5" /> Room Lokal
               </button>
               <button
-                className={viewMode === 'remote' ? 'tab-pill-active' : 'tab-pill'}
+                className={viewMode === 'remote' ? 'tab-pill-active flex items-center gap-1.5' : 'tab-pill flex items-center gap-1.5'}
                 onClick={() => setViewMode('remote')}
               >
-                Room Remote
+                <PhoneCall className="w-3.5 h-3.5" /> Room Remote
               </button>
             </nav>
 
             <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
-            <button onClick={() => setIsDictionaryOpen(true)} className="btn-secondary text-xs">
-              📖 Kamus 32 Kata
+            <button onClick={() => setIsDictionaryOpen(true)} className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3">
+              <BookOpen className="w-3.5 h-3.5" /> Kamus 32 Kata
             </button>
-            <button onClick={() => setIsAccuracyOpen(true)} className="btn-secondary text-xs">
-              📊 Uji Akurasi Model
+            <button onClick={() => setIsAccuracyOpen(true)} className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3">
+              <BarChart2 className="w-3.5 h-3.5" /> Tes Akurasi AI
             </button>
           </div>
         </div>

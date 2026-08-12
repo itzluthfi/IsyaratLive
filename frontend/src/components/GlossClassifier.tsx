@@ -40,12 +40,12 @@ export type GlossModelVersion = (typeof GLOSS_MODEL_VERSIONS)[number]
 export const LATEST_GLOSS_MODEL: GlossModelVersion = 'v7'
 
 export const GLOSS_MODEL_INFO: Record<GlossModelVersion, { label: string; description: string; inputDim: number }> = {
-  v1: { label: 'Model v1', description: 'Baseline — landmark tangan 126D', inputDim: 126 },
-  v2: { label: 'Model v2', description: 'Landmark tangan 126D + resampling sequence', inputDim: 126 },
-  v3: { label: 'Model v3', description: 'Multi-Head Self-Attention (126D)', inputDim: 126 },
-  v4: { label: 'Model v4', description: 'Distance & Normal features (160D)', inputDim: 160 },
-  v5: { label: 'Model v5', description: 'Landmark + Joint angles (156D)', inputDim: 156 },
-  v7: { label: 'Model v7', description: 'Robust Signer-Independent (164D)', inputDim: 164 },
+  v1: { label: 'Model v1', description: 'Versi Dasar', inputDim: 126 },
+  v2: { label: 'Model v2', description: 'Versi Gerakan Seimbang', inputDim: 126 },
+  v3: { label: 'Model v3', description: 'Versi Fokus Gerakan', inputDim: 126 },
+  v4: { label: 'Model v4', description: 'Versi Jarak Jari', inputDim: 160 },
+  v5: { label: 'Model v5', description: 'Versi Sudut Sendi', inputDim: 156 },
+  v7: { label: 'Model v7 (Terbaru)', description: 'Versi Akurat & Paling Stabil', inputDim: 164 },
 }
 
 const MODEL_URLS: Record<GlossModelVersion, string> = {

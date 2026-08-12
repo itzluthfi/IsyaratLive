@@ -30,12 +30,12 @@ export function ChatDisplay({ messages, liveGloss, degraded, onToggleMode }: Cha
           <div className="flex items-center gap-2 text-xs">
             <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
             <span>
-              <strong>Mode Instan Per Kata (Offline):</strong> Menampilkan kata isyarat langsung tanpa LLM.
+              <strong>Mode Kata Langsung:</strong> Menampilkan kata isyarat secara langsung.
             </span>
           </div>
           {onToggleMode && (
             <button onClick={onToggleMode} className="btn-primary text-xs px-2.5 py-1">
-              Aktifkan LLM
+              Mode Kalimat
             </button>
           )}
         </div>
@@ -46,9 +46,9 @@ export function ChatDisplay({ messages, liveGloss, degraded, onToggleMode }: Cha
         <div className="rounded-lg border border-teal-200 bg-teal-50/70 px-3 py-2 text-xs text-teal-900 font-medium flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-teal-500 animate-ping"></span>
-            <span>Deteksi real-time: <strong className="font-semibold">{liveGloss.join(' -> ')}</strong></span>
+            <span>Deteksi langsung: <strong className="font-semibold">{liveGloss.join(' -> ')}</strong></span>
           </div>
-          <span className="text-[10px] text-teal-700 font-mono">Live</span>
+          <span className="text-[10px] text-teal-700 font-mono">Aktif</span>
         </div>
       )}
 
@@ -69,7 +69,7 @@ export function ChatDisplay({ messages, liveGloss, degraded, onToggleMode }: Cha
             <div key={m.id} className="card p-3.5 hover:border-slate-300 transition-colors">
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <span className={isFromSign ? 'badge-accent' : 'badge-neutral'}>
-                  {isFromSign ? 'Isyarat -> Teks' : 'Teks -> Isyarat'}
+                  {isFromSign ? 'Isyarat ke Teks' : 'Teks ke Isyarat'}
                 </span>
                 <span className="text-[11px] text-slate-400 font-mono">
                   {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -80,7 +80,7 @@ export function ChatDisplay({ messages, liveGloss, degraded, onToggleMode }: Cha
 
               <div className="mt-2.5 flex items-center justify-between text-xs pt-2 border-t border-slate-100">
                 <span className="font-mono text-[11px] text-slate-500 bg-slate-100/80 px-2 py-0.5 rounded border border-slate-200/60 truncate max-w-[200px]">
-                  Gloss: {m.gloss.join(' + ')}
+                  Kata: {m.gloss.join(' + ')}
                 </span>
 
                 <div className="flex items-center gap-1">

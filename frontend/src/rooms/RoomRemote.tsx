@@ -332,9 +332,9 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
           >
             <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
             {status === 'waiting' && 'Menunggu lawan bicara…'}
-            {status === 'connecting' && 'Menyambungkan WebRTC…'}
-            {status === 'connected' && 'Tersambung P2P'}
-            {status === 'error' && 'Bermasalah'}
+            {status === 'connecting' && 'Menyambungkan Panggilan…'}
+            {status === 'connected' && 'Panggilan Tersambung'}
+            {status === 'error' && 'Gagal Menyambungkan'}
           </span>
         </div>
         <div className="flex items-center gap-2">

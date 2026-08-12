@@ -36,7 +36,7 @@ export function DictionaryModal({ isOpen, onClose, onSelectWordForTextToSign }: 
             <div>
               <h2 className="text-base font-bold text-slate-900">Kamus Kosakata BISINDO</h2>
               <p className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-800">32 Label Kosakata</span> yang didukung model AI & video peragaan
+                <span className="font-semibold text-slate-800">32 Kosakata Isyarat</span> &amp; video peragaan
               </p>
             </div>
           </div>
