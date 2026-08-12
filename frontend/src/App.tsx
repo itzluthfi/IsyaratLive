@@ -31,11 +31,11 @@ function App() {
             className="flex items-center gap-3 group text-left transition-opacity hover:opacity-90"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 overflow-hidden border border-slate-200">
-              <img src="/logo.jpg" alt="IsyaratLive" className="h-full w-full object-cover" />
+              <img src="/logo.jpg" alt="IsyaRasa" className="h-full w-full object-cover" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">IsyaratLive</h1>
+                <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">IsyaRasa</h1>
                 <span className="badge-active text-[10px] py-0 px-2">v2.4 Ready</span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
@@ -69,10 +69,10 @@ function App() {
             <div className="h-4 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
             <button onClick={() => setIsDictionaryOpen(true)} className="btn-secondary text-xs">
-              32 Kata
+              📖 Kamus 32 Kata
             </button>
             <button onClick={() => setIsAccuracyOpen(true)} className="btn-secondary text-xs">
-              Uji Akurasi
+              📊 Uji Akurasi Model
             </button>
           </div>
         </div>
