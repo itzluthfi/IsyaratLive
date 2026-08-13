@@ -566,19 +566,31 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Controller Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 card p-3.5">
+    <div className="flex flex-col gap-5">
+      {/* Meeting Dashboard Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 card p-4">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-800 text-sm">
+            RR
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-slate-900 leading-none">Panggilan Video IsyaRasa</h2>
+              <span className="badge-neutral font-mono text-[11px] font-bold">Room: {roomCode}</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Penerjemah Bahasa Isyarat 1-Lawan-1</p>
+          </div>
+        </div>
+
         <div className="flex flex-wrap items-center gap-3">
-          {/* Room Code & Status Panggilan */}
-          <span className="badge-neutral font-mono font-bold text-xs">Room: {roomCode}</span>
+          {/* Status Panggilan */}
           <span
             className={
               status === 'connected' ? 'badge-active' : status === 'error' ? 'badge-warning' : 'badge-neutral'
             }
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-            {status === 'waiting' && 'Menunggu lawan bicara…'}
+            <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            {status === 'waiting' && 'Menunggu Lawan Bicara…'}
             {status === 'connecting' && 'Menyambungkan…'}
             {status === 'connected' && 'Panggilan Tersambung'}
             {status === 'error' && 'Gagal Menyambungkan'}
@@ -586,7 +598,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
           <div className="h-4 w-px bg-slate-200 hidden sm:block" />
 
-          {/* Pemilih Versi Model AI — Dropdown Select Compact */}
+          {/* Model AI Select */}
           <div className="flex items-center gap-2">
             <label htmlFor="remote-model-select" className="text-xs font-semibold text-slate-600">
               Versi AI:
@@ -605,40 +617,6 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
             </select>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          {/* Sakelar On/Off Deteksi AR */}
-          <button
-            onClick={() => setDetectionOn(!detectionOn)}
-            className="btn-secondary text-xs px-3 py-1.5"
-            title="Nyalakan/Matikan Deteksi Kamera"
-          >
-            {detectionOn ? 'Deteksi AR: ON' : 'Deteksi AR: OFF'}
-          </button>
-
-          {/* Sakelar Mode Kalimat vs Kata Langsung */}
-          <button
-            onClick={() => setForcedDegraded(!forcedDegraded)}
-            className="btn-secondary text-xs px-3 py-1.5"
-          >
-            {forcedDegraded ? 'Kata Langsung' : 'Mode Kalimat'}
-          </button>
-
-          {/* Tombol Kontrol Perekaman Isyarat */}
-          {!isRecording ? (
-            <button onClick={handleManualStart} className="btn-primary text-xs px-3.5 py-1.5">
-              Mulai Mendeteksi
-            </button>
-          ) : (
-            <button onClick={handleManualStop} className="btn-danger text-xs px-3.5 py-1.5">
-              Selesai & Kirim
-            </button>
-          )}
-
-          <button onClick={handleLeaveRoom} className="btn-danger text-xs py-1.5 px-3">
-            Keluar Room
-          </button>
-        </div>
       </div>
 
       {/* Toast Notification Gestur */}
@@ -648,20 +626,6 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
         </div>
       )}
 
-      {/* Panduan Gestur Pemicu */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-3 text-xs text-slate-300 border border-slate-800">
-        <div className="flex items-center gap-2.5">
-          <div>
-            <span className="font-bold text-white">MULAI:</span> Angkat Kedua Telapak Tangan Terbuka
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <div>
-            <span className="font-bold text-white">SELESAI:</span> Silangkan Tangan di Depan
-          </div>
-        </div>
-      </div>
-
       {errorMsg && (
         <div className="badge-warning w-full rounded-lg px-3.5 py-2 text-xs flex items-center justify-between">
           <span>{errorMsg}</span>
@@ -669,166 +633,201 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
         </div>
       )}
 
-      {/* Video Call & Chat Split Layout */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 items-start">
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            {/* Local Video Stream dengan Overlay AR Skeleton Canvas */}
-            <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-950 border border-slate-200 shadow-inner">
-              <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
-              <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-              <span className="absolute bottom-2 left-2 badge-neutral !bg-slate-900/80 !text-white !border-slate-700 text-[10px]">
-                Saya (Lokal)
-              </span>
-            </div>
-
-            {/* Remote Video Stream (Lawan Bicara) */}
-            <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-950 border border-slate-200 shadow-inner">
+      {/* Dashboard Main 2-Column Grid (Inspired by Meey.tid) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        {/* Left 2 Columns: Video Stage & Floating Action Bar */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="relative rounded-2xl bg-white border border-slate-200 p-3 shadow-xs space-y-3">
+            {/* Primary Remote Video Frame (Lawan Bicara) */}
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
               <video ref={remoteVideoRef} className="h-full w-full object-cover" playsInline autoPlay />
-              <span className="absolute bottom-2 left-2 badge-neutral !bg-slate-900/80 !text-white !border-slate-700 text-[10px]">
-                Lawan Bicara
-              </span>
+              <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+                <span>Lawan Bicara</span>
+              </div>
+              {status !== 'connected' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950/90 text-xs p-6 text-center">
+                  <p className="font-semibold text-slate-200">Menunggu Lawan Bicara Bergabung</p>
+                  <p className="text-slate-400 mt-1 max-w-xs">Bagikan kode room <strong className="text-white font-mono bg-slate-800 px-2 py-0.5 rounded">{roomCode}</strong> untuk memulai panggilan video.</p>
+                </div>
+              )}
             </div>
-          </div>
 
-          {/* Live Motion Energy & Detection Monitor (Lokal) */}
-          <div className="flex flex-col gap-2 rounded-xl bg-slate-950 p-3 text-xs text-white shadow-md border border-slate-800">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${handDetected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
-                <span className="font-medium text-slate-300">
-                  {handDetected ? 'Tangan Terlihat' : 'Tangan Tidak Terlihat'}
-                </span>
-
-                {currentGesture === 'OPEN_PALM' && (
-                  <span className="rounded bg-teal-900/80 px-2 py-0.5 font-bold text-teal-300 border border-teal-700 text-[11px]">
-                    DUA TELAPAK TANGAN TERBUKA
-                  </span>
-                )}
-                {currentGesture === 'CROSSED_HANDS' && (
-                  <span className="rounded bg-rose-900/80 px-2 py-0.5 font-bold text-rose-300 border border-rose-700 text-[11px]">
-                    TANGAN BERSILANG (SELESAI)
-                  </span>
-                )}
+            {/* Secondary Local Video Frame (Saya - Lokal + AR Skeleton Canvas) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
+              <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
+                <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-md px-2.5 py-0.5 rounded-full text-white text-[11px] font-medium border border-slate-700/60">
+                  Saya (Lokal)
+                </div>
               </div>
 
-              {isRecording && handDetected && (
-                <div className="flex items-center gap-1.5">
-                  {!motionInfo.isStill ? (
-                    <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-400 border border-emerald-500/30 animate-pulse text-[11px]">
-                      GERAKAN AKTIF
+              {/* Status Pengecekan AI Kamera */}
+              <div className="sm:col-span-2 rounded-xl bg-slate-950 p-3 text-xs text-white border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${handDetected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+                    <span className="font-semibold text-slate-200">
+                      {handDetected ? 'Tangan Terdeteksi' : 'Tangan Tidak Terlihat'}
                     </span>
-                  ) : (
-                    <span className="rounded-md bg-amber-500/20 px-2 py-0.5 font-bold text-amber-300 border border-amber-500/30 text-[11px]">
-                      DIAM (Menunggu Gerakan)
+                  </div>
+                  {isRecording && (
+                    <span className="badge-active text-[10px] py-0 px-2">
+                      Penerjemah Aktif
                     </span>
                   )}
                 </div>
-              )}
+
+                <div className="py-2 text-slate-300 space-y-1">
+                  <p className="text-[11px] text-slate-400">
+                    <strong className="text-white">Petunjuk Isyarat:</strong> Angkat ✋ Telapak Tangan Terbuka untuk Mulai, atau Silangkan 🙅 Tangan untuk Selesai.
+                  </p>
+                  {currentGesture === 'OPEN_PALM' && (
+                    <p className="text-xs text-teal-300 font-semibold pt-0.5">✋ Telapak Tangan Terbuka Terdeteksi!</p>
+                  )}
+                  {currentGesture === 'CROSSED_HANDS' && (
+                    <p className="text-xs text-rose-300 font-semibold pt-0.5">🙅 Tangan Bersilang (Selesai)!</p>
+                  )}
+                  {lastPrediction && (
+                    <p className="text-xs text-teal-300 font-semibold pt-0.5">
+                      Kata Terakhir: {lastPrediction.label} ({Math.round(lastPrediction.confidence * 100)}%)
+                    </p>
+                  )}
+                  {liveGloss.length > 0 && (
+                    <p className="text-[11px] text-teal-400 font-mono pt-0.5">
+                      Terkumpul: {liveGloss.join(' + ')}
+                    </p>
+                  )}
+                  {!motionInfo.isStill && isRecording && (
+                    <p className="text-[10px] text-emerald-400 animate-pulse font-mono">⚡ Gerakan Aktif Detected</p>
+                  )}
+                  {loadError && <p className="text-xs text-rose-400 font-semibold">{loadError}</p>}
+                  {!modelReady && !loadError && <p className="text-[11px] text-slate-500 italic">Memuat model AI…</p>}
+                </div>
+              </div>
             </div>
 
-            {/* Visual Motion Gauge (Intensitas Gerak) */}
-            {isRecording && handDetected && (
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-800/80">
-                <span className="text-[10px] text-slate-400 min-w-[70px]">Intensitas Gerak:</span>
-                <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-150 ${
-                      !motionInfo.isStill ? 'bg-teal-500' : 'bg-slate-600'
-                    }`}
-                    style={{ width: `${Math.min(100, Math.max(5, motionInfo.energy * 2500))}%` }}
-                  />
-                </div>
-                <span className="text-[10px] text-slate-400 min-w-[40px] text-right font-mono">
-                  {(motionInfo.energy * 100).toFixed(1)}
-                </span>
-              </div>
-            )}
+            {/* Floating Action Controls Bar (Center Bottom Inspired by Reference) */}
+            <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={() => setDetectionOn(!detectionOn)}
+                className={`btn-secondary text-xs px-3.5 py-2 ${detectionOn ? 'border-teal-300 text-teal-700 bg-teal-50/50' : ''}`}
+                title="Nyalakan/Matikan Deteksi Kamera"
+              >
+                ✋ {detectionOn ? 'Deteksi AR: ON' : 'Deteksi AR: OFF'}
+              </button>
 
-            {/* AI Last Prediction Display */}
-            <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs">
-              <span className="text-slate-400">Hasil Isyarat Terakhir:</span>
-              {lastPrediction ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-teal-300">{lastPrediction.label}</span>
-                  <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300 border border-slate-700">
-                    {Math.round(lastPrediction.confidence * 100)}%
-                  </span>
-                </div>
+              <button
+                onClick={() => setForcedDegraded(!forcedDegraded)}
+                className="btn-secondary text-xs px-3.5 py-2"
+              >
+                💬 {forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat'}
+              </button>
+
+              {!isRecording ? (
+                <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-2">
+                  ▶ Mulai Mendeteksi
+                </button>
               ) : (
-                <span className="text-slate-500 italic">
-                  {isRecording ? 'Peragakan gerakan isyarat...' : 'Mulai deteksi untuk mencoba'}
-                </span>
+                <button onClick={handleManualStop} className="btn-secondary text-xs px-4 py-2 font-bold text-amber-700 border-amber-300 bg-amber-50">
+                  ⏹ Selesai & Kirim
+                </button>
               )}
+
+              <button onClick={handleLeaveRoom} className="btn-danger text-xs px-4 py-2 font-bold">
+                🔴 Keluar Room
+              </button>
             </div>
-
-            {/* Live Gloss Sentence Preview */}
-            {liveGloss.length > 0 && !forcedDegraded && (
-              <div className="flex items-center gap-2 pt-1.5 border-t border-slate-800/80">
-                <span className="text-[10px] font-bold text-teal-400">Kalimat Terkumpul:</span>
-                <div className="flex flex-wrap gap-1">
-                  {liveGloss.map((w, idx) => (
-                    <span key={idx} className="rounded bg-teal-900/60 px-1.5 py-0.5 text-[11px] font-semibold text-teal-200 border border-teal-700/50">
-                      {w}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {loadError && <p className="text-xs font-semibold text-rose-400">Gagal memuat model: {loadError}</p>}
-            {!modelReady && !loadError && (
-              <p className="text-[11px] text-slate-400 italic">Memuat model MediaPipe & TFJS…</p>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              className="input"
-              placeholder="Ketik pesan atau peragakan isyarat…"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendText()}
-            />
-            <button onClick={sendText} className="btn-primary shrink-0">
-              Kirim
-            </button>
           </div>
         </div>
 
-        {/* Real-time Activity Feed for Remote Room */}
-        <div className="card flex h-full flex-col gap-3 p-4 min-h-[380px]">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <h3 className="text-sm font-bold text-slate-900">Transkrip & Log Panggilan</h3>
-            <span className="text-[11px] text-slate-400 font-mono">{messages.length} Pesan</span>
+        {/* Right 1 Column: Participant & Real-Time Chat Feed Sidebar */}
+        <div className="space-y-4">
+          {/* Card 1: Participant List (Inspired by Reference) */}
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Peserta Panggilan (2)</h3>
+              <span className="text-[11px] font-semibold text-teal-600">Aktif</span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[10px]">
+                    S
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900 leading-none">Saya (Lokal)</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Penanda Isyarat</p>
+                  </div>
+                </div>
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-[10px]">
+                    L
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900 leading-none">Lawan Bicara</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Penerima Panggilan</p>
+                  </div>
+                </div>
+                <span className={`h-2 w-2 rounded-full ${status === 'connected' ? 'bg-emerald-500' : 'bg-amber-400'}`}></span>
+              </div>
+            </div>
           </div>
 
-          <div className="flex-1 space-y-2 overflow-y-auto max-h-[460px] pr-1">
-            {messages.length === 0 && (
-              <div className="flex h-36 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 text-slate-400 text-xs text-center p-4">
-                Belum ada percakapan. Mulai peragakan isyarat atau ketik pesan.
-              </div>
-            )}
-            {[...messages].reverse().map((m) => (
-              <div
-                key={m.id}
-                className={`rounded-lg border p-2.5 text-xs transition-colors ${
-                  m.from === 'me'
-                    ? 'bg-slate-900 text-white border-slate-800 ml-6'
-                    : 'bg-slate-50 text-slate-900 border-slate-200 mr-6'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${m.from === 'me' ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {m.from === 'me' ? 'Saya' : 'Lawan bicara'}
-                  </span>
-                  <span className="text-[10px] font-mono opacity-60">
-                    {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+          {/* Card 2: Real-time Activity Feed for Remote Room */}
+          <div className="card flex flex-col gap-3 p-4 min-h-[420px]">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Obrolan & Transkrip</h3>
+              <span className="text-[11px] text-slate-400 font-mono">{messages.length} Pesan</span>
+            </div>
+
+            <div className="flex-1 space-y-2 overflow-y-auto max-h-[340px] pr-1">
+              {messages.length === 0 && (
+                <div className="flex h-36 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 text-slate-400 text-xs text-center p-4">
+                  Belum ada percakapan. Mulai peragakan isyarat atau ketik pesan.
                 </div>
-                <p className="text-sm font-medium leading-normal">{m.text}</p>
-              </div>
-            ))}
+              )}
+              {[...messages].reverse().map((m) => (
+                <div
+                  key={m.id}
+                  className={`rounded-xl border p-3 text-xs transition-colors ${
+                    m.from === 'me'
+                      ? 'bg-slate-900 text-white border-slate-800 ml-4'
+                      : 'bg-slate-50 text-slate-900 border-slate-200 mr-4'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${m.from === 'me' ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {m.from === 'me' ? 'Saya' : 'Lawan bicara'}
+                    </span>
+                    <span className="text-[10px] font-mono opacity-60">
+                      {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium leading-relaxed">{m.text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Input Form */}
+            <div className="pt-2 border-t border-slate-100 flex gap-2">
+              <input
+                className="input text-xs"
+                placeholder="Ketik pesan atau peragakan isyarat…"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendText()}
+              />
+              <button onClick={sendText} className="btn-primary text-xs shrink-0 px-3">
+                Kirim
+              </button>
+            </div>
           </div>
         </div>
       </div>
