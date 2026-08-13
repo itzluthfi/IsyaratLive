@@ -111,7 +111,17 @@ function App() {
             />
             <span className="text-[9px] text-slate-400">BIS</span>
           </div>
-          <span>Model AI dilatih menggunakan Dataset Akademik <strong>WL-BISINDO</strong> (Lisensi CC BY-NC 4.0)</span>
+          <span>
+            Model AI dilatih menggunakan Dataset Akademik{' '}
+            <a 
+              href="https://www.kaggle.com/datasets/achmadnoer/alfabet-bisindo" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="font-semibold text-slate-700 hover:text-teal-600 underline underline-offset-2 transition-colors"
+            >
+              BISINDO di Kaggle
+            </a>
+          </span>
         </div>
       </footer>
 
