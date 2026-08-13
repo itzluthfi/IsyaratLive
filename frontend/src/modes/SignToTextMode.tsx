@@ -24,6 +24,7 @@ import {
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory, type ConversationMessage } from '../lib/api'
 import { Play, Square } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 import { SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
 
 const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam dan lupa gestur stop 🙅 dalam Mode Normal
@@ -68,7 +69,6 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
   // Status Perekaman / Deteksi Isyarat Aktif (Default TRUE: Langsung aktif menerjemahkan saat kamera & tangan terdeteksi)
   const [isRecording, setIsRecording] = useState(true)
   const [currentGesture, setCurrentGesture] = useState<HandGesture>('NONE')
-  const [gestureToast, setGestureToast] = useState<string | null>(null)
 
   // Ref untuk closure di dalam loop requestAnimationFrame
   const forcedDegradedRef = useRef(forcedDegraded)
@@ -126,15 +126,30 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
 
         let frameCounter = 0
         let cachedPoseResult: any = null
+        let lastFrameTime = 0
 
         async function loop() {
           if (cancelled) return
+
+          // Optimization: Skip frame processing if browser tab is hidden to save GPU/CPU
+          if (document.hidden) {
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+
+          const timestamp = performance.now()
+          // Optimization: Throttle to max 30 FPS (33ms interval) for smooth performance without lag
+          if (timestamp - lastFrameTime < 30) {
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+          lastFrameTime = timestamp
+
           try {
             const video = videoRef.current
             const canvas = canvasRef.current
 
             if (video && video.readyState >= 2) {
-              const timestamp = performance.now()
               const handResult = await detectFrame(handLandmarker, video, timestamp)
 
               frameCounter++
@@ -309,10 +324,12 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
   }, [])
 
   function triggerToast(msg: string) {
-    setGestureToast(msg)
-    setTimeout(() => {
-      setGestureToast(null)
-    }, 2800)
+    // Strip text emojis from message string if present
+    const cleanMsg = msg.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '').trim()
+    toast(cleanMsg, {
+      duration: 2500,
+      icon: '✨',
+    })
   }
 
   async function flushGloss(gloss: string[]) {
@@ -431,13 +448,6 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
           )}
         </div>
       </div>
-
-      {/* Toast Notification Gestur */}
-      {gestureToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg border border-slate-700">
-          {gestureToast}
-        </div>
-      )}
 
       {/* Panduan Gestur Pemicu & Deteksi Per-Gerakan */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-3 text-xs text-slate-300 border border-slate-800">

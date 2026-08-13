@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import { Home, Video, PhoneCall, BookOpen } from 'lucide-react'
+import { Toaster } from 'react-hot-toast'
 import { RoomLocal } from './rooms/RoomLocal'
 import { DictionaryModal } from './components/DictionaryModal'
 import { LandingPage } from './components/LandingPage'
@@ -24,6 +25,19 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            background: '#0F172A',
+            color: '#FFFFFF',
+            borderRadius: '12px',
+            fontSize: '13px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+          },
+        }}
+      />
       {/* Top Navigation Header */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">

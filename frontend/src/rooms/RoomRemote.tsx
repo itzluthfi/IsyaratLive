@@ -24,6 +24,7 @@ import {
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory } from '../lib/api'
 import { Hand, MessageSquare, Play, Square, PhoneOff } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
 const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam
@@ -76,7 +77,6 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   const [forcedDegraded, setForcedDegraded] = useState(false)
   const [isRecording, setIsRecording] = useState(true)
   const [currentGesture, setCurrentGesture] = useState<HandGesture>('NONE')
-  const [gestureToast, setGestureToast] = useState<string | null>(null)
   const [motionInfo, setMotionInfo] = useState<{ isStill: boolean; energy: number }>({
     isStill: true,
     energy: 0,
@@ -130,10 +130,10 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   }, [modelVer])
 
   function triggerToast(msg: string) {
-    setGestureToast(msg)
-    setTimeout(() => {
-      setGestureToast(null)
-    }, 2800)
+    toast(msg, {
+      duration: 2500,
+      icon: '✨',
+    })
   }
 
   function cleanupCall() {
@@ -348,15 +348,30 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
         let frameCounter = 0
         let cachedPoseResult: any = null
+        let lastFrameTime = 0
 
         async function loop() {
           if (cancelled) return
+          
+          // Optimization: Skip frame processing if browser tab is hidden to save GPU/CPU
+          if (document.hidden) {
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+
+          const timestamp = performance.now()
+          // Optimization: Throttle to max 30 FPS (33ms interval) for smooth performance without lag
+          if (timestamp - lastFrameTime < 30) {
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+          lastFrameTime = timestamp
+
           try {
             const video = localVideoRef.current
             const canvas = canvasRef.current
 
             if (video && video.readyState >= 2) {
-              const timestamp = performance.now()
               const handResult = await detectFrame(handLandmarker, video, timestamp)
 
               frameCounter++
@@ -619,13 +634,6 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
           </div>
         </div>
       </div>
-
-      {/* Toast Notification Gestur */}
-      {gestureToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg border border-slate-700">
-          {gestureToast}
-        </div>
-      )}
 
       {errorMsg && (
         <div className="badge-warning w-full rounded-lg px-3.5 py-2 text-xs flex items-center justify-between">

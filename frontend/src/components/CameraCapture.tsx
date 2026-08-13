@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useState, useImperativeHandle, useRef } from 'react'
 import { Camera, RefreshCw, Lock, SwitchCamera } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 
 interface CameraCaptureProps {
   onReady?: (video: HTMLVideoElement) => void
@@ -31,13 +32,11 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setIsLoading(false)
-        if (!window.isSecureContext) {
-          setError(
-            'Browsers di HP membutuhkan koneksi HTTPS aman untuk mengizinkan akses kamera melalui IP Wi-Fi. Silakan buka versi HTTPS.'
-          )
-        } else {
-          setError('Perangkat/Browser Anda tidak mendukung akses kamera (MediaDevices API missing).')
-        }
+        const errMsg = !window.isSecureContext
+          ? 'Peramban HP membutuhkan koneksi HTTPS aman untuk mengizinkan akses kamera.'
+          : 'Perangkat/Browser Anda tidak mendukung akses kamera (MediaDevices API missing).'
+        setError(errMsg)
+        toast.error(errMsg, { id: 'cam-api-missing' })
         setPermissionStatus('denied')
         return
       }
@@ -62,7 +61,15 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
 
         if (video) {
           video.srcObject = stream
-          await video.play()
+          const playPromise = video.play()
+          if (playPromise !== undefined) {
+            playPromise.catch((err) => {
+              // Ignore AbortError when play request is superseded
+              if (err.name !== 'AbortError') {
+                console.warn('Video play interrupted:', err)
+              }
+            })
+          }
           setPermissionStatus('granted')
           setIsLoading(false)
           onReady?.(video)
@@ -70,17 +77,24 @@ export const CameraCapture = forwardRef<HTMLVideoElement, CameraCaptureProps>(
       } catch (err) {
         setIsLoading(false)
         const errMessage = err instanceof Error ? err.message : String(err)
-        console.error('Camera Access Error:', err)
 
-        if (errMessage.includes('NotAllowedError') || errMessage.includes('Permission denied')) {
+        if (errMessage.includes('NotAllowedError') || errMessage.includes('Permission denied') || errMessage.includes('dismissed')) {
           setPermissionStatus('denied')
-          setError('Izin kamera ditolak oleh browser/pengguna. Harap izinkan kamera pada setelan situs/browser HP Anda.')
+          const msg = 'Izin kamera ditolak atau ditutup. Harap izinkan kamera pada browser Anda.'
+          setError(msg)
+          toast.error(msg, { id: 'cam-perm-dismissed' })
         } else if (errMessage.includes('NotFoundError') || errMessage.includes('DevicesNotFoundError')) {
-          setError('Perangkat kamera tidak ditemukan.')
+          const msg = 'Perangkat kamera tidak ditemukan.'
+          setError(msg)
+          toast.error(msg, { id: 'cam-not-found' })
         } else if (!window.isSecureContext) {
-          setError('Koneksi HTTP tidak aman di IP Wi-Fi HP. Gunakan HTTPS agar notifikasi izin kamera otomatis muncul.')
+          const msg = 'Koneksi HTTP tidak aman di IP Wi-Fi HP. Gunakan HTTPS.'
+          setError(msg)
+          toast.error(msg, { id: 'cam-http-insecure' })
         } else {
-          setError(`Gagal membuka kamera: ${errMessage}`)
+          const msg = `Gagal membuka kamera: ${errMessage}`
+          setError(msg)
+          toast.error(msg, { id: 'cam-generic-err' })
         }
       }
     }
