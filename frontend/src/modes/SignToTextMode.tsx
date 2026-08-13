@@ -101,9 +101,12 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
       .catch((err) => {
         console.warn('Gagal memuat model:', err)
       })
-
-    triggerToast(`Beralih ke ${GLOSS_MODEL_INFO[modelVer].label} — ${GLOSS_MODEL_INFO[modelVer].description}`)
   }, [modelVer])
+
+  const handleModelChange = (newVer: GlossModelVersion) => {
+    setModelVer(newVer)
+    toast.success(`Model AI diubah ke ${GLOSS_MODEL_INFO[newVer].label}`, { id: 'model-switch-toast' })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -327,6 +330,7 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
     // Strip text emojis from message string if present
     const cleanMsg = msg.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '').trim()
     toast(cleanMsg, {
+      id: cleanMsg,
       duration: 2500,
       icon: '✨',
     })
@@ -406,7 +410,7 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
             <select
               id="model-select"
               value={modelVer}
-              onChange={(e) => setModelVer(e.target.value as GlossModelVersion)}
+              onChange={(e) => handleModelChange(e.target.value as GlossModelVersion)}
               className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-xs focus:border-slate-800 focus:outline-none"
             >
               {GLOSS_MODEL_VERSIONS.map((v) => (

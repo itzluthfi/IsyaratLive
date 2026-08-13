@@ -125,12 +125,16 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
       .catch((err) => {
         console.warn('Gagal memuat model di Room Remote:', err)
       })
-
-    triggerToast(`Beralih ke ${GLOSS_MODEL_INFO[modelVer].label} — ${GLOSS_MODEL_INFO[modelVer].description}`)
   }, [modelVer])
+
+  const handleModelChange = (newVer: GlossModelVersion) => {
+    setModelVer(newVer)
+    toast.success(`Model AI diubah ke ${GLOSS_MODEL_INFO[newVer].label}`, { id: 'model-switch-toast' })
+  }
 
   function triggerToast(msg: string) {
     toast(msg, {
+      id: msg,
       duration: 2500,
       icon: '✨',
     })
@@ -622,7 +626,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
             <select
               id="remote-model-select"
               value={modelVer}
-              onChange={(e) => setModelVer(e.target.value as GlossModelVersion)}
+              onChange={(e) => handleModelChange(e.target.value as GlossModelVersion)}
               className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-xs focus:border-slate-800 focus:outline-none"
             >
               {GLOSS_MODEL_VERSIONS.map((v) => (
