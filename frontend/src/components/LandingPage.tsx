@@ -1,27 +1,23 @@
 import React from 'react'
-import { Video, PhoneCall, BookOpen, BarChart2, ArrowRight } from 'lucide-react'
+import { Video, PhoneCall, BookOpen, ArrowRight } from 'lucide-react'
 
 interface LandingPageProps {
   onStartLocalRoom: () => void
   onStartRemoteRoom: () => void
   onOpenDictionary: () => void
-  onOpenAccuracyTest: () => void
+  onOpenAccuracyTest?: () => void
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onStartLocalRoom,
   onStartRemoteRoom,
   onOpenDictionary,
-  onOpenAccuracyTest,
+  onOpenAccuracyTest: _onOpenAccuracyTest,
 }) => {
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-6">
       {/* Hero Header */}
-      <section className="text-center space-y-3 pt-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/70 text-xs font-semibold text-teal-800 shadow-2xs">
-          <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse"></span>
-          Aplikasi Komunikasi Inklusif BISINDO
-        </div>
+      <section className="text-center space-y-3 pt-4">
 
         <div className="space-y-2">
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900">
@@ -86,13 +82,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* Footer Utility Bar */}
       <section className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200/70 text-xs text-slate-500">
-        <span className="font-medium">Fitur Pembelajaran & Tes:</span>
+        <span className="font-medium">Panduan & Kosakata:</span>
         <div className="flex items-center gap-2">
           <button onClick={onOpenDictionary} className="btn-secondary text-xs py-1.5 px-3">
             <BookOpen className="w-3.5 h-3.5 mr-1 inline" /> Kamus 32 Kata Isyarat
-          </button>
-          <button onClick={onOpenAccuracyTest} className="btn-secondary text-xs py-1.5 px-3">
-            <BarChart2 className="w-3.5 h-3.5 mr-1 inline" /> Tes Akurasi Sistem
           </button>
         </div>
       </section>

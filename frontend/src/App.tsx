@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
-import { Home, Video, PhoneCall, BookOpen, BarChart2 } from 'lucide-react'
+import { Home, Video, PhoneCall, BookOpen } from 'lucide-react'
+import { Toaster } from 'react-hot-toast'
 import { RoomLocal } from './rooms/RoomLocal'
 import { DictionaryModal } from './components/DictionaryModal'
 import { LandingPage } from './components/LandingPage'
@@ -23,7 +24,20 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased pb-12">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            background: '#0F172A',
+            color: '#FFFFFF',
+            borderRadius: '12px',
+            fontSize: '13px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+          },
+        }}
+      />
       {/* Top Navigation Header */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
@@ -35,11 +49,8 @@ function App() {
               <img src="/logo.jpg" alt="IsyaRasa" className="h-full w-full object-cover" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">IsyaRasa</h1>
-                <span className="badge-active text-[10px] py-0 px-2">v2.4 Ready</span>
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium">
+              <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">IsyaRasa</h1>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
                 Penerjemah Bahasa Isyarat
               </p>
             </div>
@@ -72,15 +83,12 @@ function App() {
             <button onClick={() => setIsDictionaryOpen(true)} className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3">
               <BookOpen className="w-3.5 h-3.5" /> Kamus 32 Kata
             </button>
-            <button onClick={() => setIsAccuracyOpen(true)} className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3">
-              <BarChart2 className="w-3.5 h-3.5" /> Tes Akurasi AI
-            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
+      <main className="flex-1 w-full mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
         {viewMode === 'landing' && (
           <LandingPage
             onStartLocalRoom={() => setViewMode('local')}
@@ -100,6 +108,23 @@ function App() {
           </Suspense>
         )}
       </main>
+
+      {/* Clean Dataset License Footer */}
+      <footer className="w-full border-t border-slate-200/80 bg-white py-4 mt-auto">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-start text-xs text-slate-500 font-medium">
+          <span>
+            Model AI dilatih menggunakan Dataset Open Source{' '}
+            <a 
+              href="https://www.kaggle.com/datasets/achmadnoer/alfabet-bisindo" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="font-semibold text-slate-700 hover:text-teal-600 underline underline-offset-2 transition-colors"
+            >
+              BISINDO di Kaggle
+            </a>
+          </span>
+        </div>
+      </footer>
 
       {/* Modals */}
       <DictionaryModal

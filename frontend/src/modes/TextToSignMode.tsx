@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { isSpeechRecognitionSupported, listenOnce } from '../components/SpeechOutput'
 import { parseTextToSignTokens, SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
 import type { ConversationMessage } from '../lib/api'
+import { Mic } from 'lucide-react'
 
 interface TextToSignModeProps {
   onOpenDictionaryModal?: () => void
@@ -299,7 +300,10 @@ export function TextToSignMode({ onOpenDictionaryModal, initialInput = '', onAdd
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600" />
             </span>
-            <span>🎙️ Mikrofon Aktif! Silakan bicara kalimat Anda sekarang...</span>
+            <span className="flex items-center gap-1.5">
+              <Mic className="w-3.5 h-3.5" />
+              <span>Mikrofon Aktif! Silakan bicara kalimat Anda sekarang...</span>
+            </span>
           </div>
         )}
 

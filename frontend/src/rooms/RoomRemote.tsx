@@ -23,7 +23,9 @@ import {
 } from '../components/GlossClassifier'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory } from '../lib/api'
-import { SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
+import { SIGN_DICTIONARY_MAP, SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
+import { Hand, MessageSquare, Play, Square, PhoneOff, Copy, Check, Wifi, WifiOff, Pin, AlertTriangle, Mic, MicOff, Video, VideoOff, Clock, Link, LayoutGrid, Grid, Film } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
 const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam
@@ -65,6 +67,131 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   const [messages, setMessages] = useState<RemoteChatMessage[]>([])
   const [textInput, setTextInput] = useState('')
   const [detectionOn, setDetectionOn] = useState(true)
+  const [isCopied, setIsCopied] = useState(false)
+  const [isLinkCopied, setIsLinkCopied] = useState(false)
+  const [pinnedView, setPinnedView] = useState<'remote' | 'local'>('remote')
+  const [layoutMode, setLayoutMode] = useState<'hero' | 'equal'>('hero')
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isVideoOff, setIsVideoOff] = useState(false)
+  const [callDuration, setCallDuration] = useState(0)
+
+  // State Text-to-Sign Video Demonstration Modal
+  const [videoModalQueue, setVideoModalQueue] = useState<{ label: string; url: string }[]>([])
+  const [currentVideoIdx, setCurrentVideoIdx] = useState(0)
+  const [showVideoModal, setShowVideoModal] = useState(false)
+
+  const playTextAsSignVideo = (text: string) => {
+    if (!text.trim()) return
+    const rawWords = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
+    const queue: { label: string; url: string }[] = []
+
+    for (const w of rawWords) {
+      if (SIGN_DICTIONARY_MAP[w]) {
+        const item = SIGN_DICTIONARY_DATA.find(
+          (d) => d.cleanKey === w || d.label.toLowerCase() === w
+        )
+        if (item) {
+          queue.push({ label: item.label, url: item.videoUrl })
+        }
+      }
+    }
+
+    if (queue.length === 0) {
+      toast.error(`Tidak ada peragaan video isyarat untuk kata: "${text}"`, { id: 'no-sign-video' })
+      return
+    }
+
+    setVideoModalQueue(queue)
+    setCurrentVideoIdx(0)
+    setShowVideoModal(true)
+    toast.success(`Memutar ${queue.length} peragaan video isyarat BISINDO…`, { id: 'sign-video-playing' })
+  }
+
+  const handleVideoEnded = () => {
+    if (currentVideoIdx < videoModalQueue.length - 1) {
+      setCurrentVideoIdx((prev) => prev + 1)
+    }
+  }
+
+  // Timer Panggilan Video (Aktif Saat Connected)
+  useEffect(() => {
+    if (status !== 'connected') {
+      setCallDuration(0)
+      return
+    }
+    const timer = setInterval(() => {
+      setCallDuration((prev) => prev + 1)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [status])
+
+  const formatDuration = (sec: number) => {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0')
+    const s = (sec % 60).toString().padStart(2, '0')
+    return `${m}:${s}`
+  }
+
+  const handleCopyRoomCode = () => {
+    if (!roomCode) return
+    navigator.clipboard.writeText(roomCode)
+    setIsCopied(true)
+    toast.success(`Kode room ${roomCode} berhasil disalin!`, { id: 'copy-room-code' })
+    setTimeout(() => setIsCopied(false), 2000)
+  }
+
+  const handleCopyDirectLink = () => {
+    if (!roomCode) return
+    const url = `${window.location.origin}${window.location.pathname}?room=${roomCode}`
+    navigator.clipboard.writeText(url)
+    setIsLinkCopied(true)
+    toast.success('Tautan langsung room berhasil disalin!', { id: 'copy-link-toast' })
+    setTimeout(() => setIsLinkCopied(false), 2000)
+  }
+
+  const toggleMute = () => {
+    if (localVideoRef.current && localVideoRef.current.srcObject) {
+      const stream = localVideoRef.current.srcObject as MediaStream
+      const audioTrack = stream.getAudioTracks()[0]
+      if (audioTrack) {
+        audioTrack.enabled = isMuted
+      }
+    }
+    setIsMuted(!isMuted)
+    toast(!isMuted ? 'Mikrofon Dibatasi (Mute)' : 'Mikrofon Aktif', {
+      id: 'mute-toast',
+      icon: !isMuted ? '🔇' : '🎙️',
+    })
+  }
+
+  const toggleVideo = () => {
+    if (localVideoRef.current && localVideoRef.current.srcObject) {
+      const stream = localVideoRef.current.srcObject as MediaStream
+      const videoTrack = stream.getVideoTracks()[0]
+      if (videoTrack) {
+        videoTrack.enabled = isVideoOff
+      }
+    }
+    setIsVideoOff(!isVideoOff)
+    toast(!isVideoOff ? 'Kamera Nonaktif' : 'Kamera Aktif', {
+      id: 'video-toggle-toast',
+      icon: !isVideoOff ? '🙈' : '📹',
+    })
+  }
+
+  const handleLeaveClick = () => {
+    if (status === 'connected') {
+      setShowLeaveConfirm(true)
+    } else {
+      handleLeaveRoom()
+    }
+  }
+
+  const confirmLeaveRoom = () => {
+    setShowLeaveConfirm(false)
+    toast('Panggilan diakhiri.', { id: 'call-ended-toast', icon: '📞' })
+    handleLeaveRoom()
+  }
 
   // Status Mode Deteksi Isyarat (Sama Persis dengan Room Lokal / SignToTextMode)
   const [modelVer, setModelVer] = useState<GlossModelVersion>(LATEST_GLOSS_MODEL)
@@ -76,7 +203,6 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   const [forcedDegraded, setForcedDegraded] = useState(false)
   const [isRecording, setIsRecording] = useState(true)
   const [currentGesture, setCurrentGesture] = useState<HandGesture>('NONE')
-  const [gestureToast, setGestureToast] = useState<string | null>(null)
   const [motionInfo, setMotionInfo] = useState<{ isStill: boolean; energy: number }>({
     isStill: true,
     energy: 0,
@@ -125,15 +251,19 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
       .catch((err) => {
         console.warn('Gagal memuat model di Room Remote:', err)
       })
-
-    triggerToast(`Beralih ke ${GLOSS_MODEL_INFO[modelVer].label} — ${GLOSS_MODEL_INFO[modelVer].description}`)
   }, [modelVer])
 
+  const handleModelChange = (newVer: GlossModelVersion) => {
+    setModelVer(newVer)
+    toast.success(`Model AI diubah ke ${GLOSS_MODEL_INFO[newVer].label}`, { id: 'model-switch-toast' })
+  }
+
   function triggerToast(msg: string) {
-    setGestureToast(msg)
-    setTimeout(() => {
-      setGestureToast(null)
-    }, 2800)
+    toast(msg, {
+      id: msg,
+      duration: 2500,
+      icon: '✨',
+    })
   }
 
   function cleanupCall() {
@@ -348,15 +478,30 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
         let frameCounter = 0
         let cachedPoseResult: any = null
+        let lastFrameTime = 0
 
         async function loop() {
           if (cancelled) return
+          
+          // Optimization: Skip frame processing if browser tab is hidden to save GPU/CPU
+          if (document.hidden) {
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+
+          const timestamp = performance.now()
+          // Optimization: Throttle to max 30 FPS (33ms interval) for smooth performance without lag
+          if (timestamp - lastFrameTime < 30) {
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+          lastFrameTime = timestamp
+
           try {
             const video = localVideoRef.current
             const canvas = canvasRef.current
 
             if (video && video.readyState >= 2) {
-              const timestamp = performance.now()
               const handResult = await detectFrame(handLandmarker, video, timestamp)
 
               frameCounter++
@@ -392,7 +537,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                   if (openPalmFrames >= 4 && !isRecordingRef.current) {
                     recordingStartTimeRef.current = performance.now()
                     setIsRecording(true)
-                    triggerToast('🖐️🖐️ Dua Telapak Tangan Terbuka! Perekaman Kalimat Dimulai.')
+                    triggerToast('Telapak Tangan Terbuka — Perekaman Kalimat Dimulai')
                     openPalmFrames = 0
                   }
                 } else if (gesture === 'CROSSED_HANDS') {
@@ -402,7 +547,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                     setIsRecording(false)
                     recordingStartTimeRef.current = 0
                     buffer.clear()
-                    triggerToast('🙅 Tangan Bersilang! Memproses Kalimat...')
+                    triggerToast('Tangan Bersilang — Memproses Kalimat...')
                     closedFistFrames = 0
                     if (collectedGlossRef.current.length > 0 && !forcedDegradedRef.current) {
                       const glossToFlush = [...collectedGlossRef.current]
@@ -567,115 +712,112 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Controller Header Bar & Sakelar Mode & Versi Model */}
+    <div className="flex flex-col gap-5">
+      {/* Meeting Dashboard Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Information Room Code & Status Panggilan */}
-          <span className="badge-neutral font-mono font-bold text-xs">Room: {roomCode}</span>
-          <span
-            className={
-              status === 'connected' ? 'badge-active' : status === 'error' ? 'badge-warning' : 'badge-neutral'
-            }
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-            {status === 'waiting' && 'Menunggu lawan bicara…'}
-            {status === 'connecting' && 'Menyambungkan Panggilan…'}
-            {status === 'connected' && 'Panggilan Tersambung'}
-            {status === 'error' && 'Gagal Menyambungkan'}
-          </span>
-
-          {/* Pemilih Versi Model AI */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 gap-0.5 ml-1">
-            {GLOSS_MODEL_VERSIONS.map((v) => (
-              <button
-                key={v}
-                onClick={() => setModelVer(v)}
-                className={modelVer === v ? 'tab-pill-active' : 'tab-pill'}
-                title={`${GLOSS_MODEL_INFO[v].label} — ${GLOSS_MODEL_INFO[v].description}`}
-              >
-                {GLOSS_MODEL_INFO[v].label}
-                {v === LATEST_GLOSS_MODEL && <span className="ml-1 text-teal-600">•</span>}
-              </button>
-            ))}
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-slate-800 text-sm">
+            RR
           </div>
-
-          {/* Mode Switcher */}
-          <span className={forcedDegraded ? 'badge-warning' : 'badge-active'}>
-            {forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat Otomatis'}
-          </span>
-
-          {/* Status Sakelar Detection */}
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-              isRecording
-                ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
-                : 'bg-slate-100 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-rose-600' : 'bg-slate-400'}`} />
-            {isRecording ? 'PENERJEMAH AKTIF' : 'PENERJEMAH PAUS'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Sakelar Mode Degradasi vs Normal */}
-          <button
-            onClick={() => setForcedDegraded(!forcedDegraded)}
-            className={forcedDegraded ? 'btn-primary text-xs px-3.5 py-1.5' : 'btn-secondary text-xs px-3.5 py-1.5'}
-          >
-            {forcedDegraded ? 'Mode Kalimat Otomatis' : 'Mode Kata Langsung'}
-          </button>
-
-          {/* Sakelar On/Off Deteksi & AR Skeleton */}
-          <button
-            onClick={() => setDetectionOn((v) => !v)}
-            className={detectionOn ? 'btn-secondary text-xs px-3 py-1.5' : 'btn-primary text-xs px-3 py-1.5'}
-          >
-            {detectionOn ? 'Deteksi AR Aktif' : 'Deteksi AR Nonaktif'}
-          </button>
-
-          {/* Tombol Lihat Dictionary */}
-          {onOpenDictionaryModal && (
-            <button onClick={onOpenDictionaryModal} className="btn-secondary text-xs px-3 py-1.5">
-              Kamus 32 Kata
-            </button>
-          )}
-
-          {/* Tombol Kontrol Perekaman Isyarat */}
-          {!isRecording ? (
-            <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-1.5">
-              Mulai Mendeteksi
-            </button>
-          ) : (
-            <button onClick={handleManualStop} className="btn-danger text-xs px-4 py-1.5">
-              Selesai & Kirim
-            </button>
-          )}
-
-          <button onClick={handleLeaveRoom} className="btn-danger text-xs py-1.5 px-3">
-            Keluar Room
-          </button>
-        </div>
-      </div>
-
-      {/* Toast Notification Gestur */}
-      {gestureToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg border border-slate-700">
-          {gestureToast}
-        </div>
-      )}
-
-      {/* Panduan Gestur Pemicu */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-3 text-xs text-slate-300 border border-slate-800">
-        <div className="flex items-center gap-2.5">
           <div>
-            <span className="font-bold text-white">MULAI:</span> Angkat Kedua Telapak Tangan Terbuka
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h2 className="text-base font-bold text-slate-900 leading-none">Panggilan Video IsyaRasa</h2>
+              
+              {/* Prominent Large Room Code Badge & Icon-Only Copy Buttons */}
+              <div className="flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-1.5 text-white border border-slate-800 shadow-sm">
+                <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">KODE:</span>
+                <span className="font-mono text-base font-extrabold tracking-widest text-teal-300 select-all">{roomCode}</span>
+                
+                <div className="flex items-center gap-1 border-l border-slate-700/80 pl-2 ml-1">
+                  {/* Icon-Only Copy Code Button */}
+                  <button
+                    onClick={handleCopyRoomCode}
+                    className="p-1 rounded-md bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white active:scale-95 transition-all border border-slate-700/60"
+                    title="Salin Kode Room"
+                  >
+                    {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
+
+                  {/* Icon-Only Copy Direct Link Button */}
+                  <button
+                    onClick={handleCopyDirectLink}
+                    className="p-1 rounded-md bg-slate-800 text-teal-300 hover:bg-slate-700 hover:text-white active:scale-95 transition-all border border-slate-700/60"
+                    title="Salin Tautan Langsung Room"
+                  >
+                    {isLinkCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Link className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Penerjemah Bahasa Isyarat 1-Lawan-1</p>
           </div>
         </div>
-        <div className="flex items-center gap-2.5">
-          <div>
-            <span className="font-bold text-white">SELESAI:</span> Silangkan Tangan di Depan
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Timer Durasi Panggilan Video */}
+          {status === 'connected' && (
+            <div className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 border border-slate-200 shadow-2xs">
+              <Clock className="w-3.5 h-3.5 text-slate-500 animate-spin" />
+              <span className="font-mono text-xs font-bold text-slate-800">{formatDuration(callDuration)}</span>
+            </div>
+          )}
+
+          {/* Status Panggilan & Indikator Sinyal WebRTC */}
+          <div className="flex items-center gap-2">
+            <span
+              className={
+                status === 'connected' ? 'badge-active' : status === 'error' ? 'badge-warning' : 'badge-neutral'
+              }
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              {status === 'waiting' && 'Menunggu Lawan Bicara…'}
+              {status === 'connecting' && 'Menyambungkan…'}
+              {status === 'connected' && 'Panggilan Tersambung'}
+              {status === 'error' && 'Gagal Menyambungkan'}
+            </span>
+
+            {/* Indikator Kualitas Sinyal P2P */}
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold border ${
+                status === 'connected'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}
+              title={status === 'connected' ? 'Koneksi P2P Baik (Latensi Rendah)' : 'Sinyal Menunggu Panggilan'}
+            >
+              {status === 'connected' ? (
+                <>
+                  <Wifi className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                  <span>Sinyal: Baik</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Sinyal: --</span>
+                </>
+              )}
+            </span>
+          </div>
+
+          <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
+          {/* Model AI Select */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="remote-model-select" className="text-xs font-semibold text-slate-600">
+              Versi AI:
+            </label>
+            <select
+              id="remote-model-select"
+              value={modelVer}
+              onChange={(e) => handleModelChange(e.target.value as GlossModelVersion)}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-xs focus:border-slate-800 focus:outline-none"
+            >
+              {GLOSS_MODEL_VERSIONS.map((v) => (
+                <option key={v} value={v}>
+                  {GLOSS_MODEL_INFO[v].label} {v === LATEST_GLOSS_MODEL ? '(Terbaik)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
@@ -687,194 +829,449 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
         </div>
       )}
 
-      {/* Video Call & Chat Split Layout */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 items-start">
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-3">
-            {/* Local Video Stream dengan Overlay AR Skeleton Canvas */}
-            <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-950 border border-slate-200 shadow-inner">
-              <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
-              <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-              <span className="absolute bottom-2 left-2 badge-neutral !bg-slate-900/80 !text-white !border-slate-700 text-[10px]">
-                Saya (Lokal)
-              </span>
-            </div>
+      {/* Dashboard Main 2-Column Grid (Inspired by Meey.tid) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        {/* Left 2 Columns: Video Stage & Floating Action Bar */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="relative rounded-2xl bg-white border border-slate-200 p-3 shadow-xs space-y-3">
+            {/* Video Call Stage — Dual Camera Layout (Dua Mode: Hero vs Sama Besar) */}
+            <div className="space-y-3">
+              {layoutMode === 'equal' ? (
+                /* Mode 2: Kamera Ukuran Sama Besar (Side-by-side / Stacked 50-50) */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Camera 1: Saya (Lokal) */}
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                    <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
+                    <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute top-2.5 left-2.5 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-semibold border border-slate-700/60 flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-teal-400"></span>
+                      <span>Saya (Lokal)</span>
+                    </div>
+                  </div>
 
-            {/* Remote Video Stream (Lawan Bicara) */}
-            <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-950 border border-slate-200 shadow-inner">
-              <video ref={remoteVideoRef} className="h-full w-full object-cover" playsInline autoPlay />
-              <span className="absolute bottom-2 left-2 badge-neutral !bg-slate-900/80 !text-white !border-slate-700 text-[10px]">
-                Lawan Bicara
-              </span>
-            </div>
-          </div>
+                  {/* Camera 2: Lawan Bicara */}
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                    <video ref={remoteVideoRef} className="h-full w-full object-cover" playsInline autoPlay />
+                    <div className="absolute top-2.5 left-2.5 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-semibold border border-slate-700/60 flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+                      <span>Lawan Bicara</span>
+                    </div>
+                    {status !== 'connected' && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950/90 text-xs p-4 text-center">
+                        <p className="font-semibold text-slate-200">Menunggu Lawan Bicara</p>
+                        <button
+                          onClick={handleCopyRoomCode}
+                          className="mt-2 text-[11px] font-bold text-teal-400 hover:underline flex items-center gap-1"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>Salin Kode ({roomCode})</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Mode 1: Hero Featured Frame + Thumbnail Secondary */
+                <>
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                    {pinnedView === 'remote' ? (
+                      <>
+                        <video ref={remoteVideoRef} className="h-full w-full object-cover" playsInline autoPlay />
+                        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+                          <span>Lawan Bicara (Utama)</span>
+                        </div>
+                        {status !== 'connected' && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950/90 text-xs p-6 text-center">
+                            <p className="font-semibold text-slate-200">Menunggu Lawan Bicara Bergabung</p>
+                            <p className="text-slate-400 mt-1 max-w-xs">
+                              Bagikan kode room <strong className="text-teal-300 font-mono bg-slate-800 px-2 py-0.5 rounded font-bold tracking-wider">{roomCode}</strong> untuk memulai panggilan video.
+                            </p>
+                            <button
+                              onClick={handleCopyRoomCode}
+                              className="mt-3 flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all"
+                            >
+                              {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                              <span>{isCopied ? 'Kode Room Tersalin!' : 'Salin Kode Room'}</span>
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
+                        <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+                        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-teal-400"></span>
+                          <span>Saya (Lokal - Disematkan)</span>
+                        </div>
+                      </>
+                    )}
 
-          {/* Live Motion Energy & Detection Monitor (Lokal) */}
-          <div className="flex flex-col gap-2 rounded-xl bg-slate-950 p-3 text-xs text-white shadow-md border border-slate-800">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${handDetected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
-                <span className="font-medium text-slate-300">
-                  {handDetected ? 'Tangan Terlihat' : 'Tangan Tidak Terlihat'}
-                </span>
+                    <button
+                      onClick={() => setPinnedView(pinnedView === 'remote' ? 'local' : 'remote')}
+                      className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 hover:bg-slate-800 active:scale-95 transition-all flex items-center gap-1.5 shadow-sm"
+                      title="Sematkan / Tukar Tampilan Utama Kamera"
+                    >
+                      <Pin className="w-3.5 h-3.5 text-teal-400" />
+                      <span>{pinnedView === 'remote' ? 'Sematkan Saya' : 'Sematkan Lawan'}</span>
+                    </button>
+                  </div>
+                </>
+              )}
 
-                {currentGesture === 'OPEN_PALM' && (
-                  <span className="rounded bg-teal-900/80 px-2 py-0.5 font-bold text-teal-300 border border-teal-700 text-[11px]">
-                    DUA TELAPAK TANGAN TERBUKA
-                  </span>
-                )}
-                {currentGesture === 'CROSSED_HANDS' && (
-                  <span className="rounded bg-rose-900/80 px-2 py-0.5 font-bold text-rose-300 border border-rose-700 text-[11px]">
-                    TANGAN BERSILANG (SELESAI)
-                  </span>
-                )}
-              </div>
-
-              {isRecording && handDetected && (
-                <div className="flex items-center gap-1.5">
-                  {!motionInfo.isStill ? (
-                    <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-400 border border-emerald-500/30 animate-pulse text-[11px]">
-                      GERAKAN AKTIF
+              {/* Panel Status Pengecekan AI Kamera & Petunjuk Gestur Terpisah Atas-Bawah */}
+              <div className="rounded-xl bg-slate-950 p-3.5 text-xs text-white border border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${handDetected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+                    <span className="font-semibold text-slate-200">
+                      {handDetected ? 'Tangan Terdeteksi' : 'Tangan Tidak Terlihat'}
                     </span>
-                  ) : (
-                    <span className="rounded-md bg-amber-500/20 px-2 py-0.5 font-bold text-amber-300 border border-amber-500/30 text-[11px]">
-                      DIAM (Menunggu Gerakan)
+                  </div>
+                  {isRecording && (
+                    <span className="badge-active text-[10px] py-0.5 px-2.5">
+                      Penerjemah Aktif
                     </span>
                   )}
                 </div>
-              )}
+
+                {/* Petunjuk Gestur Pemicu Terpisah Atas-Bawah (Jelas & Rapi) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2.5 rounded-lg bg-slate-900 px-3 py-1.5 border border-slate-800">
+                    <span className="font-bold text-teal-400 shrink-0">MULAI:</span>
+                    <span className="text-slate-300">Telapak Tangan Terbuka</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 rounded-lg bg-slate-900 px-3 py-1.5 border border-slate-800">
+                    <span className="font-bold text-rose-400 shrink-0">SELESAI:</span>
+                    <span className="text-slate-300">Silangkan Tangan di Depan</span>
+                  </div>
+                </div>
+
+                <div className="pt-1 text-slate-300 space-y-1 border-t border-slate-800/80">
+                  {currentGesture === 'OPEN_PALM' && (
+                    <p className="text-xs text-teal-300 font-semibold">Telapak Tangan Terbuka Terdeteksi!</p>
+                  )}
+                  {currentGesture === 'CROSSED_HANDS' && (
+                    <p className="text-xs text-rose-300 font-semibold">Tangan Bersilang (Selesai)!</p>
+                  )}
+                  {lastPrediction && (
+                    <p className="text-xs text-teal-300 font-semibold">
+                      Kata Terakhir: {lastPrediction.label} ({Math.round(lastPrediction.confidence * 100)}%)
+                    </p>
+                  )}
+                  {liveGloss.length > 0 && (
+                    <p className="text-[11px] text-teal-400 font-mono">
+                      Terkumpul: {liveGloss.join(' + ')}
+                    </p>
+                  )}
+                  {!motionInfo.isStill && isRecording && (
+                    <p className="text-[10px] text-emerald-400 animate-pulse font-mono">Gerakan Aktif Terdeteksi</p>
+                  )}
+                  {loadError && <p className="text-xs text-rose-400 font-semibold">{loadError}</p>}
+                  {!modelReady && !loadError && <p className="text-[11px] text-slate-500 italic">Memuat model AI…</p>}
+                </div>
+              </div>
             </div>
 
-            {/* Visual Motion Gauge (Intensitas Gerak) */}
-            {isRecording && handDetected && (
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-800/80">
-                <span className="text-[10px] text-slate-400 min-w-[70px]">Intensitas Gerak:</span>
-                <div className="flex-1 h-2 rounded-full bg-slate-800 overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-150 ${
-                      !motionInfo.isStill ? 'bg-teal-500' : 'bg-slate-600'
-                    }`}
-                    style={{ width: `${Math.min(100, Math.max(5, motionInfo.energy * 2500))}%` }}
-                  />
-                </div>
-                <span className="text-[10px] text-slate-400 min-w-[40px] text-right font-mono">
-                  {(motionInfo.energy * 100).toFixed(1)}
-                </span>
-              </div>
-            )}
+            {/* Floating Action Controls Bar (Center Bottom Inspired by Zoom) */}
+            <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-center gap-2">
+              {/* Toggle Mode Layout Kamera (Hero vs Sama Besar) */}
+              <button
+                onClick={() => setLayoutMode(layoutMode === 'hero' ? 'equal' : 'hero')}
+                className={`btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 ${
+                  layoutMode === 'equal' ? 'border-teal-300 text-teal-700 bg-teal-50/50' : ''
+                }`}
+                title="Tukar Mode Tampilan Kamera (Utama & Mini vs Sama Besar)"
+              >
+                {layoutMode === 'hero' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Grid className="w-3.5 h-3.5" />}
+                <span>{layoutMode === 'hero' ? 'Mode: Utama & Mini' : 'Mode: Sama Besar'}</span>
+              </button>
 
-            {/* AI Last Prediction Display */}
-            <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-xs">
-              <span className="text-slate-400">Hasil Isyarat Terakhir:</span>
-              {lastPrediction ? (
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-teal-300">{lastPrediction.label}</span>
-                  <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300 border border-slate-700">
-                    {Math.round(lastPrediction.confidence * 100)}%
-                  </span>
-                </div>
+              {/* Audio Mute/Unmute */}
+              <button
+                onClick={toggleMute}
+                className={`btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 ${
+                  isMuted ? 'border-rose-300 text-rose-700 bg-rose-50' : ''
+                }`}
+                title={isMuted ? 'Buka Pembatasan Mikrofon' : 'Batasi Mikrofon (Mute)'}
+              >
+                {isMuted ? <MicOff className="w-3.5 h-3.5 text-rose-600" /> : <Mic className="w-3.5 h-3.5" />}
+                <span>{isMuted ? 'Muted' : 'Mic On'}</span>
+              </button>
+
+              {/* Video Camera On/Off */}
+              <button
+                onClick={toggleVideo}
+                className={`btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 ${
+                  isVideoOff ? 'border-rose-300 text-rose-700 bg-rose-50' : ''
+                }`}
+                title={isVideoOff ? 'Nyalakan Kamera' : 'Matikan Kamera'}
+              >
+                {isVideoOff ? <VideoOff className="w-3.5 h-3.5 text-rose-600" /> : <Video className="w-3.5 h-3.5" />}
+                <span>{isVideoOff ? 'Kamera Off' : 'Kamera On'}</span>
+              </button>
+
+              {/* Sakelar Deteksi AR */}
+              <button
+                onClick={() => setDetectionOn(!detectionOn)}
+                className={`btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 ${detectionOn ? 'border-teal-300 text-teal-700 bg-teal-50/50' : ''}`}
+                title="Nyalakan/Matikan Deteksi Kamera"
+              >
+                <Hand className="w-3.5 h-3.5" />
+                <span>{detectionOn ? 'Deteksi AR: ON' : 'Deteksi AR: OFF'}</span>
+              </button>
+
+              <button
+                onClick={() => setForcedDegraded(!forcedDegraded)}
+                className="btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>{forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat'}</span>
+              </button>
+
+              {!isRecording ? (
+                <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5">
+                  <Play className="w-3.5 h-3.5" />
+                  <span>Mulai Mendeteksi</span>
+                </button>
               ) : (
-                <span className="text-slate-500 italic">
-                  {isRecording ? 'Peragakan gerakan isyarat...' : 'Mulai deteksi untuk mencoba'}
-                </span>
-              )}
-            </div>
-
-            {/* Live Gloss Sentence Preview */}
-            {liveGloss.length > 0 && !forcedDegraded && (
-              <div className="flex items-center gap-2 pt-1.5 border-t border-slate-800/80">
-                <span className="text-[10px] font-bold text-teal-400">Kalimat Terkumpul:</span>
-                <div className="flex flex-wrap gap-1">
-                  {liveGloss.map((w, idx) => (
-                    <span key={idx} className="rounded bg-teal-900/60 px-1.5 py-0.5 text-[11px] font-semibold text-teal-200 border border-teal-700/50">
-                      {w}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {loadError && <p className="text-xs font-semibold text-rose-400">Gagal memuat model: {loadError}</p>}
-            {!modelReady && !loadError && (
-              <p className="text-[11px] text-slate-400 italic">Memuat model MediaPipe & TFJS…</p>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              className="input"
-              placeholder="Ketik pesan atau peragakan isyarat…"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendText()}
-            />
-            <button onClick={sendText} className="btn-primary shrink-0">
-              Kirim
-            </button>
-          </div>
-
-          {/* Quick Label Chips Reference */}
-          <div className="rounded-2xl bg-white p-3.5 shadow-xs border border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-700">32 Kosakata Isyarat Terdaftar:</span>
-              {onOpenDictionaryModal && (
-                <button onClick={onOpenDictionaryModal} className="text-[11px] font-semibold text-teal-600 hover:underline">
-                  Lihat Semua (32) -&gt;
+                <button onClick={handleManualStop} className="btn-secondary text-xs px-4 py-2 font-bold text-amber-700 border-amber-300 bg-amber-50 flex items-center gap-1.5">
+                  <Square className="w-3.5 h-3.5" />
+                  <span>Selesai & Kirim</span>
                 </button>
               )}
-            </div>
-            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-              {SIGN_DICTIONARY_DATA.slice(0, 16).map((item) => (
-                <span
-                  key={item.id}
-                  className="rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 border border-slate-200"
-                >
-                  {item.label}
-                </span>
-              ))}
-              <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[11px] font-bold text-teal-700 border border-teal-200">
-                +16 Lainnya
-              </span>
+
+              <button onClick={handleLeaveClick} className="btn-danger text-xs px-4 py-2 font-bold flex items-center gap-1.5">
+                <PhoneOff className="w-3.5 h-3.5" />
+                <span>Keluar Room</span>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Real-time Activity Feed for Remote Room */}
-        <div className="card flex h-full flex-col gap-3 p-4 min-h-[380px]">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <h3 className="text-sm font-bold text-slate-900">Transkrip & Log Panggilan</h3>
-            <span className="text-[11px] text-slate-400 font-mono">{messages.length} Pesan</span>
-          </div>
+        {/* Right 1 Column: Participant & Real-Time Chat Feed Sidebar */}
+        <div className="space-y-4">
+          {/* Card 1: Dynamic Participant List */}
+          <div className="card p-4 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Peserta Panggilan ({status === 'connected' ? 2 : 1})
+              </h3>
+              <span className={`text-[11px] font-semibold ${status === 'connected' ? 'text-teal-600' : 'text-amber-600'}`}>
+                {status === 'connected' ? '2 Aktif' : 'Menunggu Peer'}
+              </span>
+            </div>
 
-          <div className="flex-1 space-y-2 overflow-y-auto max-h-[460px] pr-1">
-            {messages.length === 0 && (
-              <div className="flex h-36 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 text-slate-400 text-xs text-center p-4">
-                Belum ada percakapan. Mulai peragakan isyarat atau ketik pesan.
+            <div className="space-y-2 text-xs">
+              {/* Participant 1: Saya (Lokal) */}
+              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[10px]">
+                    S
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900 leading-none">Saya (Lokal)</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Penanda Isyarat • Host</p>
+                  </div>
+                </div>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-xs" />
               </div>
-            )}
-            {[...messages].reverse().map((m) => (
+
+              {/* Participant 2: Lawan Bicara */}
               <div
-                key={m.id}
-                className={`rounded-lg border p-2.5 text-xs transition-colors ${
-                  m.from === 'me'
-                    ? 'bg-slate-900 text-white border-slate-800 ml-6'
-                    : 'bg-slate-50 text-slate-900 border-slate-200 mr-6'
+                className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
+                  status === 'connected'
+                    ? 'bg-slate-50 border-slate-200/80 text-slate-900'
+                    : 'bg-slate-50/50 border-dashed border-slate-200 opacity-60'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${m.from === 'me' ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {m.from === 'me' ? 'Saya' : 'Lawan bicara'}
-                  </span>
-                  <span className="text-[10px] font-mono opacity-60">
-                    {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                      status === 'connected' ? 'bg-teal-600 text-white' : 'bg-slate-300 text-slate-600'
+                    }`}
+                  >
+                    L
+                  </div>
+                  <div>
+                    <p className="font-semibold leading-none">
+                      {status === 'connected' ? 'Lawan Bicara' : 'Lawan Bicara (Belum Bergabung)'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {status === 'connected' ? 'Terhubung • Peer' : 'Menunggu koneksi P2P…'}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm font-medium leading-normal">{m.text}</p>
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    status === 'connected' ? 'bg-emerald-500 shadow-xs' : 'bg-amber-400 animate-pulse'
+                  }`}
+                />
               </div>
-            ))}
+            </div>
+          </div>
+
+          {/* Card 2: Real-time Activity Feed for Remote Room */}
+          <div className="card flex flex-col gap-3 p-4 min-h-[420px]">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Obrolan & Transkrip</h3>
+              <span className="text-[11px] text-slate-400 font-mono">{messages.length} Pesan</span>
+            </div>
+
+            <div className="flex-1 space-y-2 overflow-y-auto max-h-[340px] pr-1">
+              {messages.length === 0 && (
+                <div className="flex h-36 flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 text-slate-400 text-xs text-center p-4">
+                  Belum ada percakapan. Mulai peragakan isyarat atau ketik pesan.
+                </div>
+              )}
+              {[...messages].reverse().map((m) => (
+                <div
+                  key={m.id}
+                  className={`rounded-xl border p-3 text-xs transition-colors ${
+                    m.from === 'me'
+                      ? 'bg-slate-900 text-white border-slate-800 ml-4'
+                      : 'bg-slate-50 text-slate-900 border-slate-200 mr-4'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${m.from === 'me' ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {m.from === 'me' ? 'Saya' : 'Lawan bicara'}
+                    </span>
+                    <span className="text-[10px] font-mono opacity-60">
+                      {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-xs font-medium leading-relaxed">{m.text}</p>
+                  <button
+                    onClick={() => playTextAsSignVideo(m.text)}
+                    className={`mt-1.5 flex items-center gap-1 text-[10px] font-semibold hover:underline ${
+                      m.from === 'me' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                    }`}
+                  >
+                    <Film className="w-3 h-3" />
+                    <span>Peragakan Video Isyarat</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Input Form dengan Tombol Peragakan Video Isyarat */}
+            <div className="pt-2 border-t border-slate-100 flex gap-2">
+              <input
+                className="input text-xs"
+                placeholder="Ketik pesan atau peragakan isyarat…"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendText()}
+              />
+              <button
+                onClick={() => playTextAsSignVideo(textInput)}
+                className="btn-secondary text-xs shrink-0 px-2.5 flex items-center gap-1 font-semibold text-teal-700 border-teal-200 bg-teal-50 hover:bg-teal-100"
+                title="Peragakan Teks Sebagai Video Isyarat BISINDO"
+              >
+                <Film className="w-3.5 h-3.5 text-teal-600" />
+                <span className="hidden sm:inline">Peragakan</span>
+              </button>
+              <button onClick={sendText} className="btn-primary text-xs shrink-0 px-3">
+                Kirim
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Modal Peragaan Video Isyarat BISINDO (Mode Teks ke Isyarat Video) */}
+      {showVideoModal && videoModalQueue.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="card max-w-lg w-full p-5 space-y-4 shadow-2xl border border-slate-800 bg-slate-900 text-white">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Film className="w-4.5 h-4.5 text-teal-400" />
+                <h3 className="text-sm font-bold">Peragaan Video Isyarat BISINDO</h3>
+              </div>
+              <button
+                onClick={() => setShowVideoModal(false)}
+                className="text-slate-400 hover:text-white font-bold text-sm px-2 py-1 rounded-lg hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Video Player Clip */}
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black border border-slate-800 shadow-inner">
+              <video
+                key={videoModalQueue[currentVideoIdx].url}
+                src={videoModalQueue[currentVideoIdx].url}
+                autoPlay
+                onEnded={handleVideoEnded}
+                controls
+                className="h-full w-full object-contain"
+              />
+              <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-teal-300 border border-slate-700/60">
+                Kata: {videoModalQueue[currentVideoIdx].label.toUpperCase()} ({currentVideoIdx + 1}/{videoModalQueue.length})
+              </div>
+            </div>
+
+            {/* Playlist Kata Badges & Tutup */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {videoModalQueue.map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentVideoIdx(idx)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                      idx === currentVideoIdx
+                        ? 'bg-teal-600 text-white border-teal-500 shadow-sm'
+                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowVideoModal(false)}
+                className="btn-secondary text-xs px-3 py-1.5 font-semibold text-slate-300 border-slate-700 bg-slate-800 hover:bg-slate-700"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Keluar Room / Mengakhiri Panggilan */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="card max-w-md w-full p-6 space-y-4 text-center shadow-2xl border border-slate-200">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 border border-rose-200">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Akhiri Panggilan Video?</h3>
+              <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                Anda sedang tersambung dalam panggilan dengan lawan bicara. Mengakhiri room ini akan memutuskan koneksi video secara langsung untuk kedua pihak.
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                className="btn-secondary flex-1 text-xs py-2.5 font-semibold"
+              >
+                Batal (Lanjutkan)
+              </button>
+              <button
+                onClick={confirmLeaveRoom}
+                className="btn-danger flex-1 text-xs py-2.5 font-bold"
+              >
+                Ya, Akhiri Panggilan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -23,6 +23,8 @@ import {
 } from '../components/GlossClassifier'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory, type ConversationMessage } from '../lib/api'
+import { Play, Square } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 import { SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
 
 const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam dan lupa gestur stop 🙅 dalam Mode Normal
@@ -67,7 +69,6 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
   // Status Perekaman / Deteksi Isyarat Aktif (Default TRUE: Langsung aktif menerjemahkan saat kamera & tangan terdeteksi)
   const [isRecording, setIsRecording] = useState(true)
   const [currentGesture, setCurrentGesture] = useState<HandGesture>('NONE')
-  const [gestureToast, setGestureToast] = useState<string | null>(null)
 
   // Ref untuk closure di dalam loop requestAnimationFrame
   const forcedDegradedRef = useRef(forcedDegraded)
@@ -100,9 +101,12 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
       .catch((err) => {
         console.warn('Gagal memuat model:', err)
       })
-
-    triggerToast(`Beralih ke ${GLOSS_MODEL_INFO[modelVer].label} — ${GLOSS_MODEL_INFO[modelVer].description}`)
   }, [modelVer])
+
+  const handleModelChange = (newVer: GlossModelVersion) => {
+    setModelVer(newVer)
+    toast.success(`Model AI diubah ke ${GLOSS_MODEL_INFO[newVer].label}`, { id: 'model-switch-toast' })
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -125,15 +129,30 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
 
         let frameCounter = 0
         let cachedPoseResult: any = null
+        let lastFrameTime = 0
 
         async function loop() {
           if (cancelled) return
+
+          // Optimization: Skip frame processing if browser tab is hidden to save GPU/CPU
+          if (document.hidden) {
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+
+          const timestamp = performance.now()
+          // Optimization: Throttle to max 30 FPS (33ms interval) for smooth performance without lag
+          if (timestamp - lastFrameTime < 30) {
+            rafId = requestAnimationFrame(loop)
+            return
+          }
+          lastFrameTime = timestamp
+
           try {
             const video = videoRef.current
             const canvas = canvasRef.current
 
             if (video && video.readyState >= 2) {
-              const timestamp = performance.now()
               const handResult = await detectFrame(handLandmarker, video, timestamp)
 
               frameCounter++
@@ -308,10 +327,13 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
   }, [])
 
   function triggerToast(msg: string) {
-    setGestureToast(msg)
-    setTimeout(() => {
-      setGestureToast(null)
-    }, 2800)
+    // Strip text emojis from message string if present
+    const cleanMsg = msg.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]/gu, '').trim()
+    toast(cleanMsg, {
+      id: cleanMsg,
+      duration: 2500,
+      icon: '✨',
+    })
   }
 
   async function flushGloss(gloss: string[]) {
@@ -377,75 +399,59 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
   }
   return (
     <div className="flex flex-col gap-4">
-      {/* Control Panel Mode Switcher & Sakelar Gestur */}
-      <div className="flex flex-wrap items-center justify-between gap-3 card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Pemilih Versi Model AI */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 gap-0.5">
-            {GLOSS_MODEL_VERSIONS.map((v) => (
-              <button
-                key={v}
-                onClick={() => setModelVer(v)}
-                className={modelVer === v ? 'tab-pill-active' : 'tab-pill'}
-                title={`${GLOSS_MODEL_INFO[v].label} — ${GLOSS_MODEL_INFO[v].description}`}
-              >
-                {GLOSS_MODEL_INFO[v].label}
-                {v === LATEST_GLOSS_MODEL && <span className="ml-1 text-teal-600">•</span>}
-              </button>
-            ))}
+      {/* Control Panel Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 card p-3.5">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Pemilih Versi Model AI — Dropdown Select Compact */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="model-select" className="text-xs font-semibold text-slate-600">
+              Versi AI:
+            </label>
+            <select
+              id="model-select"
+              value={modelVer}
+              onChange={(e) => handleModelChange(e.target.value as GlossModelVersion)}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-xs focus:border-slate-800 focus:outline-none"
+            >
+              {GLOSS_MODEL_VERSIONS.map((v) => (
+                <option key={v} value={v}>
+                  {GLOSS_MODEL_INFO[v].label} {v === LATEST_GLOSS_MODEL ? '(Terbaik)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Mode Switcher */}
+          <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
+          {/* Status Mode */}
           <span className={forcedDegraded ? 'badge-warning' : 'badge-active'}>
             {forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat Otomatis'}
-          </span>
-
-          {/* Status Sakelar Detection */}
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-              isRecording
-                ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
-                : 'bg-slate-100 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-rose-600' : 'bg-slate-400'}`} />
-            {isRecording ? 'PENERJEMAH AKTIF' : 'PENERJEMAH PAUS'}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Sakelar Mode Degradasi vs Normal */}
+          {/* Sakelar Mode Kalimat vs Kata Langsung */}
           <button
             onClick={() => setForcedDegraded(!forcedDegraded)}
-            className={forcedDegraded ? 'btn-primary text-xs px-3.5 py-1.5' : 'btn-secondary text-xs px-3.5 py-1.5'}
+            className="btn-secondary text-xs px-3 py-1.5"
           >
-            {forcedDegraded ? 'Mode Kalimat Otomatis' : 'Mode Kata Langsung'}
-          </button>
-
-          {/* Tombol Lihat Dictionary */}
-          <button onClick={onOpenDictionaryModal} className="btn-secondary text-xs px-3 py-1.5">
-            Kamus 32 Kata
+            {forcedDegraded ? 'Ubah ke Mode Kalimat' : 'Ubah ke Kata Langsung'}
           </button>
 
           {/* Tombol Kontrol Perekaman Isyarat */}
           {!isRecording ? (
-            <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-1.5">
-              Mulai Mendeteksi
+            <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-1.5 flex items-center gap-1.5">
+              <Play className="w-3.5 h-3.5" />
+              <span>Mulai Mendeteksi</span>
             </button>
           ) : (
-            <button onClick={handleManualStop} className="btn-danger text-xs px-4 py-1.5">
-              Selesai & Kirim
+            <button onClick={handleManualStop} className="btn-danger text-xs px-4 py-1.5 flex items-center gap-1.5">
+              <Square className="w-3.5 h-3.5" />
+              <span>Selesai & Kirim</span>
             </button>
           )}
         </div>
       </div>
-
-      {/* Toast Notification Gestur */}
-      {gestureToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg border border-slate-700">
-          {gestureToast}
-        </div>
-      )}
 
       {/* Panduan Gestur Pemicu & Deteksi Per-Gerakan */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-2xl bg-slate-900 p-3 text-xs text-slate-300 border border-slate-800">
