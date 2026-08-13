@@ -98,18 +98,13 @@ function App() {
       {/* Simple Dataset License Footer */}
       <footer className="w-full border-t border-slate-200/80 bg-white py-4 mt-auto">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-start gap-3 text-xs text-slate-500 font-medium">
-          {/* Slot/Placeholder Logo BISINDO */}
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-slate-100 border border-slate-200 text-slate-500 overflow-hidden text-[10px] font-bold shrink-0">
+          {/* Logo BISINDO */}
+          <div className="flex h-7 items-center justify-center shrink-0">
             <img 
-              src="/bisindo-logo.png" 
-              alt="BISINDO" 
-              className="h-full w-full object-contain"
-              onError={(e) => {
-                // Fallback tampilan jika image belum dimasukkan
-                e.currentTarget.style.display = 'none'
-              }} 
+              src="/assets/logo-bisindo.png" 
+              alt="Logo BISINDO" 
+              className="h-7 w-auto object-contain"
             />
-            <span className="text-[9px] text-slate-400">BIS</span>
           </div>
           <span>
             Model AI dilatih menggunakan Dataset Akademik{' '}
