@@ -23,7 +23,6 @@ import {
 } from '../components/GlossClassifier'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory } from '../lib/api'
-import { SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
 const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam
@@ -568,87 +567,70 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Controller Header Bar & Sakelar Mode & Versi Model */}
-      <div className="flex flex-wrap items-center justify-between gap-3 card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Information Room Code & Status Panggilan */}
+      {/* Controller Header Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 card p-3.5">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Room Code & Status Panggilan */}
           <span className="badge-neutral font-mono font-bold text-xs">Room: {roomCode}</span>
           <span
             className={
               status === 'connected' ? 'badge-active' : status === 'error' ? 'badge-warning' : 'badge-neutral'
             }
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+            <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
             {status === 'waiting' && 'Menunggu lawan bicara…'}
-            {status === 'connecting' && 'Menyambungkan Panggilan…'}
+            {status === 'connecting' && 'Menyambungkan…'}
             {status === 'connected' && 'Panggilan Tersambung'}
             {status === 'error' && 'Gagal Menyambungkan'}
           </span>
 
-          {/* Pemilih Versi Model AI */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 gap-0.5 ml-1">
-            {GLOSS_MODEL_VERSIONS.map((v) => (
-              <button
-                key={v}
-                onClick={() => setModelVer(v)}
-                className={modelVer === v ? 'tab-pill-active' : 'tab-pill'}
-                title={`${GLOSS_MODEL_INFO[v].label} — ${GLOSS_MODEL_INFO[v].description}`}
-              >
-                {GLOSS_MODEL_INFO[v].label}
-                {v === LATEST_GLOSS_MODEL && <span className="ml-1 text-teal-600">•</span>}
-              </button>
-            ))}
+          <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
+          {/* Pemilih Versi Model AI — Dropdown Select Compact */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="remote-model-select" className="text-xs font-semibold text-slate-600">
+              Versi AI:
+            </label>
+            <select
+              id="remote-model-select"
+              value={modelVer}
+              onChange={(e) => setModelVer(e.target.value as GlossModelVersion)}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-xs focus:border-slate-800 focus:outline-none"
+            >
+              {GLOSS_MODEL_VERSIONS.map((v) => (
+                <option key={v} value={v}>
+                  {GLOSS_MODEL_INFO[v].label} {v === LATEST_GLOSS_MODEL ? '(Terbaik)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
-
-          {/* Mode Switcher */}
-          <span className={forcedDegraded ? 'badge-warning' : 'badge-active'}>
-            {forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat Otomatis'}
-          </span>
-
-          {/* Status Sakelar Detection */}
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-              isRecording
-                ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
-                : 'bg-slate-100 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-rose-600' : 'bg-slate-400'}`} />
-            {isRecording ? 'PENERJEMAH AKTIF' : 'PENERJEMAH PAUS'}
-          </span>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Sakelar Mode Degradasi vs Normal */}
+          {/* Sakelar On/Off Deteksi AR */}
+          <button
+            onClick={() => setDetectionOn(!detectionOn)}
+            className="btn-secondary text-xs px-3 py-1.5"
+            title="Nyalakan/Matikan Deteksi Kamera"
+          >
+            {detectionOn ? 'Deteksi AR: ON' : 'Deteksi AR: OFF'}
+          </button>
+
+          {/* Sakelar Mode Kalimat vs Kata Langsung */}
           <button
             onClick={() => setForcedDegraded(!forcedDegraded)}
-            className={forcedDegraded ? 'btn-primary text-xs px-3.5 py-1.5' : 'btn-secondary text-xs px-3.5 py-1.5'}
+            className="btn-secondary text-xs px-3 py-1.5"
           >
-            {forcedDegraded ? 'Mode Kalimat Otomatis' : 'Mode Kata Langsung'}
+            {forcedDegraded ? 'Kata Langsung' : 'Mode Kalimat'}
           </button>
-
-          {/* Sakelar On/Off Deteksi & AR Skeleton */}
-          <button
-            onClick={() => setDetectionOn((v) => !v)}
-            className={detectionOn ? 'btn-secondary text-xs px-3 py-1.5' : 'btn-primary text-xs px-3 py-1.5'}
-          >
-            {detectionOn ? 'Deteksi AR Aktif' : 'Deteksi AR Nonaktif'}
-          </button>
-
-          {/* Tombol Lihat Dictionary */}
-          {onOpenDictionaryModal && (
-            <button onClick={onOpenDictionaryModal} className="btn-secondary text-xs px-3 py-1.5">
-              Kamus 32 Kata
-            </button>
-          )}
 
           {/* Tombol Kontrol Perekaman Isyarat */}
           {!isRecording ? (
-            <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-1.5">
+            <button onClick={handleManualStart} className="btn-primary text-xs px-3.5 py-1.5">
               Mulai Mendeteksi
             </button>
           ) : (
-            <button onClick={handleManualStop} className="btn-danger text-xs px-4 py-1.5">
+            <button onClick={handleManualStop} className="btn-danger text-xs px-3.5 py-1.5">
               Selesai & Kirim
             </button>
           )}
@@ -811,31 +793,6 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
             <button onClick={sendText} className="btn-primary shrink-0">
               Kirim
             </button>
-          </div>
-
-          {/* Quick Label Chips Reference */}
-          <div className="rounded-2xl bg-white p-3.5 shadow-xs border border-slate-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-700">32 Kosakata Isyarat Terdaftar:</span>
-              {onOpenDictionaryModal && (
-                <button onClick={onOpenDictionaryModal} className="text-[11px] font-semibold text-teal-600 hover:underline">
-                  Lihat Semua (32) -&gt;
-                </button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-              {SIGN_DICTIONARY_DATA.slice(0, 16).map((item) => (
-                <span
-                  key={item.id}
-                  className="rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 border border-slate-200"
-                >
-                  {item.label}
-                </span>
-              ))}
-              <span className="rounded-lg bg-teal-50 px-2 py-0.5 text-[11px] font-bold text-teal-700 border border-teal-200">
-                +16 Lainnya
-              </span>
-            </div>
           </div>
         </div>
 
