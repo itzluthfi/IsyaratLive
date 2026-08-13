@@ -23,7 +23,7 @@ import {
 } from '../components/GlossClassifier'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory } from '../lib/api'
-import { Hand, MessageSquare, Play, Square, PhoneOff } from 'lucide-react'
+import { Hand, MessageSquare, Play, Square, PhoneOff, Copy, Check, Wifi, WifiOff } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -66,6 +66,15 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   const [messages, setMessages] = useState<RemoteChatMessage[]>([])
   const [textInput, setTextInput] = useState('')
   const [detectionOn, setDetectionOn] = useState(true)
+  const [isCopied, setIsCopied] = useState(false)
+
+  const handleCopyRoomCode = () => {
+    if (!roomCode) return
+    navigator.clipboard.writeText(roomCode)
+    setIsCopied(true)
+    toast.success(`Kode room ${roomCode} berhasil disalin!`, { id: 'copy-room-code' })
+    setTimeout(() => setIsCopied(false), 2000)
+  }
 
   // Status Mode Deteksi Isyarat (Sama Persis dengan Room Lokal / SignToTextMode)
   const [modelVer, setModelVer] = useState<GlossModelVersion>(LATEST_GLOSS_MODEL)
@@ -594,27 +603,62 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
             RR
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-bold text-slate-900 leading-none">Panggilan Video IsyaRasa</h2>
-              <span className="badge-neutral font-mono text-[11px] font-bold">Room: {roomCode}</span>
+              <div className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1 text-white border border-slate-800 shadow-xs">
+                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">KODE:</span>
+                <span className="font-mono text-xs font-bold tracking-widest text-teal-300">{roomCode}</span>
+                <button
+                  onClick={handleCopyRoomCode}
+                  className="ml-1.5 flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-700 hover:text-white active:scale-95 transition-all border border-slate-700"
+                  title="Salin Kode Room"
+                >
+                  {isCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>{isCopied ? 'Tersalin' : 'Salin'}</span>
+                </button>
+              </div>
             </div>
             <p className="text-xs text-slate-500 mt-1">Penerjemah Bahasa Isyarat 1-Lawan-1</p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Status Panggilan */}
-          <span
-            className={
-              status === 'connected' ? 'badge-active' : status === 'error' ? 'badge-warning' : 'badge-neutral'
-            }
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-            {status === 'waiting' && 'Menunggu Lawan Bicara…'}
-            {status === 'connecting' && 'Menyambungkan…'}
-            {status === 'connected' && 'Panggilan Tersambung'}
-            {status === 'error' && 'Gagal Menyambungkan'}
-          </span>
+          {/* Status Panggilan & Indikator Sinyal WebRTC */}
+          <div className="flex items-center gap-2">
+            <span
+              className={
+                status === 'connected' ? 'badge-active' : status === 'error' ? 'badge-warning' : 'badge-neutral'
+              }
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${status === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              {status === 'waiting' && 'Menunggu Lawan Bicara…'}
+              {status === 'connecting' && 'Menyambungkan…'}
+              {status === 'connected' && 'Panggilan Tersambung'}
+              {status === 'error' && 'Gagal Menyambungkan'}
+            </span>
+
+            {/* Indikator Kualitas Sinyal P2P */}
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold border ${
+                status === 'connected'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}
+              title={status === 'connected' ? 'Koneksi P2P Baik (Latensi Rendah)' : 'Sinyal Menunggu Panggilan'}
+            >
+              {status === 'connected' ? (
+                <>
+                  <Wifi className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                  <span>Sinyal: Baik</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Sinyal: --</span>
+                </>
+              )}
+            </span>
+          </div>
 
           <div className="h-4 w-px bg-slate-200 hidden sm:block" />
 
@@ -661,7 +705,16 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
               {status !== 'connected' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950/90 text-xs p-6 text-center">
                   <p className="font-semibold text-slate-200">Menunggu Lawan Bicara Bergabung</p>
-                  <p className="text-slate-400 mt-1 max-w-xs">Bagikan kode room <strong className="text-white font-mono bg-slate-800 px-2 py-0.5 rounded">{roomCode}</strong> untuk memulai panggilan video.</p>
+                  <p className="text-slate-400 mt-1 max-w-xs">
+                    Bagikan kode room <strong className="text-teal-300 font-mono bg-slate-800 px-2 py-0.5 rounded font-bold tracking-wider">{roomCode}</strong> untuk memulai panggilan video.
+                  </p>
+                  <button
+                    onClick={handleCopyRoomCode}
+                    className="mt-3 flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all"
+                  >
+                    {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{isCopied ? 'Kode Room Tersalin!' : 'Salin Kode Room'}</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -762,14 +815,19 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
         {/* Right 1 Column: Participant & Real-Time Chat Feed Sidebar */}
         <div className="space-y-4">
-          {/* Card 1: Participant List (Inspired by Reference) */}
+          {/* Card 1: Dynamic Participant List */}
           <div className="card p-4 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Peserta Panggilan (2)</h3>
-              <span className="text-[11px] font-semibold text-teal-600">Aktif</span>
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Peserta Panggilan ({status === 'connected' ? 2 : 1})
+              </h3>
+              <span className={`text-[11px] font-semibold ${status === 'connected' ? 'text-teal-600' : 'text-amber-600'}`}>
+                {status === 'connected' ? '2 Aktif' : 'Menunggu Peer'}
+              </span>
             </div>
 
             <div className="space-y-2 text-xs">
+              {/* Participant 1: Saya (Lokal) */}
               <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
                 <div className="flex items-center gap-2.5">
                   <div className="h-7 w-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[10px]">
@@ -777,23 +835,42 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                   </div>
                   <div>
                     <p className="font-semibold text-slate-900 leading-none">Saya (Lokal)</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Penanda Isyarat</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Penanda Isyarat • Host</p>
                   </div>
                 </div>
-                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-xs" />
               </div>
 
-              <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/80">
+              {/* Participant 2: Lawan Bicara */}
+              <div
+                className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
+                  status === 'connected'
+                    ? 'bg-slate-50 border-slate-200/80 text-slate-900'
+                    : 'bg-slate-50/50 border-dashed border-slate-200 opacity-60'
+                }`}
+              >
                 <div className="flex items-center gap-2.5">
-                  <div className="h-7 w-7 rounded-full bg-teal-600 text-white flex items-center justify-center font-bold text-[10px]">
+                  <div
+                    className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                      status === 'connected' ? 'bg-teal-600 text-white' : 'bg-slate-300 text-slate-600'
+                    }`}
+                  >
                     L
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 leading-none">Lawan Bicara</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Penerima Panggilan</p>
+                    <p className="font-semibold leading-none">
+                      {status === 'connected' ? 'Lawan Bicara' : 'Lawan Bicara (Belum Bergabung)'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {status === 'connected' ? 'Terhubung • Peer' : 'Menunggu koneksi P2P…'}
+                    </p>
                   </div>
                 </div>
-                <span className={`h-2 w-2 rounded-full ${status === 'connected' ? 'bg-emerald-500' : 'bg-amber-400'}`}></span>
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    status === 'connected' ? 'bg-emerald-500 shadow-xs' : 'bg-amber-400 animate-pulse'
+                  }`}
+                />
               </div>
             </div>
           </div>
