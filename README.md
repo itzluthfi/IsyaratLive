@@ -2,7 +2,7 @@
 
 Penerjemah BISINDO (Bahasa Isyarat Indonesia) real-time berbasis AI —
 GEMASTIK XIX 2026, Divisi VIII: Pengembangan Perangkat Lunak. Dokumen produk lengkap ada di
-[`docs/PRD_IsyaratLive.md`](docs/PRD_IsyaratLive.md) (lihat §15.6/§15.7 untuk
+[`docs/PRD_IsyaRasa.md`](docs/PRD_IsyaRasa.md) (lihat §15.6/§15.7 untuk
 audit & status terbaru).
 
 ## Struktur
@@ -61,8 +61,9 @@ Panduan lengkap mengenai arsitektur Docker 4-container (Caddy, Frontend Nginx, B
 👉 **[`docs/DEPLOY.md`](docs/DEPLOY.md)**
 
 Ringkasan deploy di VPS Ubuntu:
+
 ```bash
-git clone https://github.com/itzluthfi/IsyaratLive.git isyaratlive && cd isyaratlive
+git clone https://github.com/itzluthfi/IsyaRasa.git IsyaRasa && cd IsyaRasa
 cp .env.example .env && cp backend/.env.example backend/.env
 # isi DOMAIN & API key di file .env
 docker compose up -d --build
@@ -74,9 +75,8 @@ Lihat checklist fase lengkap & audit di PRD bagian 15.2–15.9. Ringkas:
 
 - [x] **Fase 0** — struktur proyek, scaffold frontend & backend
 - [~] **Fase 1** — model klasifikasi gloss v1/v2 sudah ada, terverifikasi bisa
-      dimuat browser, & bisa diuji dari UI (v3 rusak, dikeluarkan — PRD §15.8),
-      tapi belum lewat pipeline training resmi ml/ dataset WL-BISINDO (§15.6)
+  dimuat browser, & bisa diuji dari UI (v3 rusak, dikeluarkan — PRD §15.8),
+  tapi belum lewat pipeline training resmi ml/ dataset WL-BISINDO (§15.6)
 - [x] **Fase 2/3** — backend, Room Lokal (kamera↔teks & teks↔isyarat satu feed obrolan)
 - [x] **Fase 4** — Mode 2 (dictionary video, 32 kata) + Room Remote (video call WebRTC 1-lawan-1)
 - [x] **Fase 5** — deployment ke VPS (Docker Compose + Caddy HTTPS otomatis di `docs/DEPLOY.md`)
-

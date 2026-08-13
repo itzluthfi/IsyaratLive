@@ -1,5 +1,5 @@
 @echo off
-REM Jalankan backend + frontend IsyaratLive sekaligus (masing-masing di jendela terpisah).
+REM Jalankan backend + frontend IsyaRasa sekaligus (masing-masing di jendela terpisah).
 REM Jalankan setup.bat lebih dulu kalau belum pernah npm install.
 
 if not exist "%~dp0backend\node_modules" (
@@ -20,8 +20,8 @@ if not exist "%~dp0backend\.env" (
 
 echo Membuka backend (http://localhost:3001) dan frontend (https://localhost:5173) di jendela terpisah...
 
-start "IsyaratLive - Backend" cmd /k "cd /d "%~dp0backend" && npm run dev"
-start "IsyaratLive - Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
+start "IsyaRasa - Backend" cmd /k "cd /d "%~dp0backend" && npm run dev"
+start "IsyaRasa - Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
 
 echo.
 echo Kedua server sedang start di jendela baru. Tutup jendela itu untuk mematikan masing-masing server.

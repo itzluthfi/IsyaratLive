@@ -1,5 +1,5 @@
-# Backend IsyaratLive — Node.js + Express + Socket.io
-# Build: docker build -t isyaratlive-backend ./backend
+# Backend IsyaRasa — Node.js + Express + Socket.io
+# Build: docker build -t IsyaRasa-backend ./backend
 
 FROM node:20-alpine AS build
 WORKDIR /app

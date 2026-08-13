@@ -1,12 +1,14 @@
-# PRD — IsyaratLive
+# PRD — IsyaRasa
+
 ### Penerjemah Bahasa Isyarat Indonesia (BISINDO) Real-Time Berbasis AI
+
 **GEMASTIK XIX 2026 — Divisi VIII: Pengembangan Perangkat Lunak**
 
 ---
 
 ## 1. Ringkasan Eksekutif
 
-IsyaratLive adalah aplikasi web yang menerjemahkan BISINDO (Bahasa Isyarat Indonesia) menjadi teks dan suara secara real-time, dan sebaliknya, untuk memfasilitasi komunikasi tatap muka antara penyandang Tuli dan orang dengar tanpa memerlukan juru bahasa isyarat manusia. Sistem menggabungkan computer vision (deteksi gerakan tangan) dengan large language model (penyusunan kalimat natural) sebagai dua lapis AI yang sama-sama menjadi inti fungsi — bukan sekadar fitur tambahan.
+IsyaRasa adalah aplikasi web yang menerjemahkan BISINDO (Bahasa Isyarat Indonesia) menjadi teks dan suara secara real-time, dan sebaliknya, untuk memfasilitasi komunikasi tatap muka antara penyandang Tuli dan orang dengar tanpa memerlukan juru bahasa isyarat manusia. Sistem menggabungkan computer vision (deteksi gerakan tangan) dengan large language model (penyusunan kalimat natural) sebagai dua lapis AI yang sama-sama menjadi inti fungsi — bukan sekadar fitur tambahan.
 
 **Kategori lomba:** Divisi VIII — Pengembangan Perangkat Lunak, GEMASTIK XIX 2026
 **Tema yang diusung:** Inklusif (aksesibilitas komunikasi difabel Tuli)
@@ -29,28 +31,30 @@ IsyaratLive adalah aplikasi web yang menerjemahkan BISINDO (Bahasa Isyarat Indon
 4. Dapat didemokan meyakinkan dalam waktu 5-10 menit di hadapan juri.
 
 ### Non-Tujuan (Out of Scope)
+
 - **Bukan** avatar 3D animasi generatif untuk mode teks→isyarat — menggunakan dictionary video/GIF isyarat yang sudah direkam.
 - **Bukan** penerjemah kalimat kompleks/multi-klausa pada versi MVP.
 - **Bukan** mendukung seluruh variasi dialek isyarat daerah pada versi kompetisi (fokus BISINDO standar nasional).
 - **Bukan** panggilan video multi-peserta (>2 orang) atau fitur konferensi kelas Zoom penuh (recording, breakout room, dsb) — Room Remote (§5.3) dibatasi 1-lawan-1.
 
-> *Update 2026-08-10: butir "bukan video call jarak jauh" pada versi PRD sebelumnya dicabut secara sengaja — lihat §5.3 "Room Remote" untuk keputusan pivot dan alasannya.*
+> _Update 2026-08-10: butir "bukan video call jarak jauh" pada versi PRD sebelumnya dicabut secara sengaja — lihat §5.3 "Room Remote" untuk keputusan pivot dan alasannya._
 
 ---
 
 ## 4. Target Pengguna
 
-| Persona | Kebutuhan |
-|---|---|
-| Penyandang Tuli | Berkomunikasi dengan orang dengar tanpa juru bahasa isyarat manusia, di ruang publik/keluarga |
-| Orang dengar (petugas layanan publik, keluarga, guru) | Memahami isyarat lawan bicara & merespons dengan cara yang dipahami penyandang Tuli |
-| Institusi (sekolah inklusi, puskesmas, kantor kelurahan) | Alat bantu komunikasi murah, tidak butuh instalasi khusus, cukup buka browser |
+| Persona                                                  | Kebutuhan                                                                                     |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Penyandang Tuli                                          | Berkomunikasi dengan orang dengar tanpa juru bahasa isyarat manusia, di ruang publik/keluarga |
+| Orang dengar (petugas layanan publik, keluarga, guru)    | Memahami isyarat lawan bicara & merespons dengan cara yang dipahami penyandang Tuli           |
+| Institusi (sekolah inklusi, puskesmas, kantor kelurahan) | Alat bantu komunikasi murah, tidak butuh instalasi khusus, cukup buka browser                 |
 
 ---
 
 ## 5. Alur Sistem (User Flow)
 
 ### Mode 1 — Isyarat → Teks & Suara
+
 ```
 1. Pengguna membuka web app, memberi izin akses kamera
 2. Kamera menangkap gerakan tangan
@@ -69,6 +73,7 @@ IsyaratLive adalah aplikasi web yang menerjemahkan BISINDO (Bahasa Isyarat Indon
 ```
 
 ### Mode 2 — Suara/Teks → Isyarat
+
 ```
 1. Orang dengar berbicara atau mengetik teks
 2. Jika berbicara: Web Speech API (speech-to-text) mengubah jadi teks
@@ -79,6 +84,7 @@ IsyaratLive adalah aplikasi web yang menerjemahkan BISINDO (Bahasa Isyarat Indon
 ```
 
 ### Mode Degradasi (saat koneksi internet terputus)
+
 ```
 Layer CV (deteksi + klasifikasi gloss) tetap berjalan lokal di browser
       ↓
@@ -138,10 +144,10 @@ Sistem menampilkan gloss mentah tanpa penyusunan kalimat
 
 ## 7. Peran AI (Kenapa Bukan CRUD + Tempelan)
 
-| Komponen | Tanpa komponen ini... |
-|---|---|
-| CV (MediaPipe + klasifikasi gloss) | Sistem buta total, tidak bisa membaca isyarat sama sekali |
-| LLM (9Router) | Output cuma tumpukan kata acak ("SAYA MAKAN SUDAH TADI"), tidak bisa dipahami orang dengar sebagai kalimat |
+| Komponen                           | Tanpa komponen ini...                                                                                      |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| CV (MediaPipe + klasifikasi gloss) | Sistem buta total, tidak bisa membaca isyarat sama sekali                                                  |
+| LLM (9Router)                      | Output cuma tumpukan kata acak ("SAYA MAKAN SUDAH TADI"), tidak bisa dipahami orang dengar sebagai kalimat |
 
 Kedua lapisan AI ini **saling melengkapi dan sama-sama esensial** — inilah yang membedakan dari seluruh referensi open-source BISINDO yang ada saat ini, yang berhenti di tahap "deteksi kata/huruf" tanpa lapisan pemahaman bahasa di atasnya.
 
@@ -149,18 +155,18 @@ Kedua lapisan AI ini **saling melengkapi dan sama-sama esensial** — inilah yan
 
 ## 8. Tech Stack
 
-| Layer | Teknologi | Keterangan |
-|---|---|---|
-| Deteksi landmark tangan | `@mediapipe/tasks-vision` (JS resmi Google) | Real-time, jalan di browser, tervalidasi mendukung mode video + 2 tangan + akselerasi GPU |
-| Klasifikasi gloss | Siformer/SPOTER (Transformer berbasis landmark pose), dilatih di Python memakai dataset WL-BISINDO, diekspor ke TensorFlow.js | Fork dari repo resmi `AceKinnn/WL-BISINDO`, akurasi baseline 93-94% (skema Signer-Dependent) |
-| Normalisasi bahasa | 9Router → LLM (multi-provider, ada fallback) | Backend-only, API key tidak boleh di client |
-| Text-to-Speech & Speech-to-Text | Web Speech API (built-in browser) | Gratis, mendukung Bahasa Indonesia |
-| Frontend | React + Vite, Tailwind | Konsisten dengan stack NetMon ITATS |
-| Backend | Node.js + Express | Proxy ke 9Router, endpoint normalisasi |
-| Video call Room Remote | WebRTC (`RTCPeerConnection`, bawaan browser) + Socket.io (signaling) | Gratis; video/audio P2P langsung antar browser, server cuma tukar pesan kecil — lihat §5.3 |
-| Database | MySQL | Riwayat percakapan |
-| Deployment | VPS `vmi3108861` (CyberPanel/OpenLiteSpeed) atau `newgabungan`, HTTPS wajib (Let's Encrypt) | Akses kamera browser mensyaratkan HTTPS |
-| Integrasi tambahan (opsional) | Hermes Agent (Telegram) | Review riwayat percakapan via bot |
+| Layer                           | Teknologi                                                                                                                     | Keterangan                                                                                   |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Deteksi landmark tangan         | `@mediapipe/tasks-vision` (JS resmi Google)                                                                                   | Real-time, jalan di browser, tervalidasi mendukung mode video + 2 tangan + akselerasi GPU    |
+| Klasifikasi gloss               | Siformer/SPOTER (Transformer berbasis landmark pose), dilatih di Python memakai dataset WL-BISINDO, diekspor ke TensorFlow.js | Fork dari repo resmi `AceKinnn/WL-BISINDO`, akurasi baseline 93-94% (skema Signer-Dependent) |
+| Normalisasi bahasa              | 9Router → LLM (multi-provider, ada fallback)                                                                                  | Backend-only, API key tidak boleh di client                                                  |
+| Text-to-Speech & Speech-to-Text | Web Speech API (built-in browser)                                                                                             | Gratis, mendukung Bahasa Indonesia                                                           |
+| Frontend                        | React + Vite, Tailwind                                                                                                        | Konsisten dengan stack NetMon ITATS                                                          |
+| Backend                         | Node.js + Express                                                                                                             | Proxy ke 9Router, endpoint normalisasi                                                       |
+| Video call Room Remote          | WebRTC (`RTCPeerConnection`, bawaan browser) + Socket.io (signaling)                                                          | Gratis; video/audio P2P langsung antar browser, server cuma tukar pesan kecil — lihat §5.3   |
+| Database                        | MySQL                                                                                                                         | Riwayat percakapan                                                                           |
+| Deployment                      | VPS `vmi3108861` (CyberPanel/OpenLiteSpeed) atau `newgabungan`, HTTPS wajib (Let's Encrypt)                                   | Akses kamera browser mensyaratkan HTTPS                                                      |
+| Integrasi tambahan (opsional)   | Hermes Agent (Telegram)                                                                                                       | Review riwayat percakapan via bot                                                            |
 
 ---
 
@@ -168,38 +174,39 @@ Kedua lapisan AI ini **saling melengkapi dan sama-sama esensial** — inilah yan
 
 ### Dataset utama: WL-BISINDO (publik, siap pakai — tidak perlu rekam sendiri)
 
-- **Sumber:** [WL-BISINDO](https://www.kaggle.com/datasets/glennleonali/wl-bisindo) — dataset akademik publik yang dibuat khusus mengatasi kelangkaan data BISINDO level-kata, dipublikasikan oleh Grace Oktaviani Kindy, Glenn Leonali & Henry Lucky (BINUS University), dimuat di *Procedia Computer Science* 2025 (DOI: 10.1016/j.procs.2025.08.277).
+- **Sumber:** [WL-BISINDO](https://www.kaggle.com/datasets/glennleonali/wl-bisindo) — dataset akademik publik yang dibuat khusus mengatasi kelangkaan data BISINDO level-kata, dipublikasikan oleh Grace Oktaviani Kindy, Glenn Leonali & Henry Lucky (BINUS University), dimuat di _Procedia Computer Science_ 2025 (DOI: 10.1016/j.procs.2025.08.277).
 - **Isi:** 1.600 video RGB, **32 kosakata** BISINDO, diperagakan oleh 5 penanda tangan berbeda (varian regional Banten), 10 sampel per kata per orang. Ukuran ±2,16 GB.
 - **Lisensi:** CC BY-NC 4.0 (non-komersial, wajib sitasi) — aman untuk kompetisi akademik GEMASTIK. Jika produk dikembangkan ke arah komersial pasca-lomba, perlu izin ulang ke pembuat dataset atau sumber data pengganti.
 - **Format nama file:** `[signerID]_[labelID]_[sampleID].mp4` — contoh `signer0_label0_sample10.mp4` = penanda tangan ke-0, kata label 0 ("Air"), sampel ke-10.
 
 ### Daftar 32 kosakata (MVP)
 
-| Label | Kata | Label | Kata | Label | Kata | Label | Kata |
-|---|---|---|---|---|---|---|---|
-| 0 | Air | 8 | Motor | 16 | Mengapa | 24 | Datang |
-| 1 | Belajar | 9 | Saya | 17 | Bagaimana | 25 | Teman |
-| 2 | Cari | 10 | Terima kasih | 18 | Merah | 26 | Keluarga |
-| 3 | Hari | 11 | Tuli | 19 | Kuning | 27 | Rumah |
-| 4 | Ingat | 12 | Apa | 20 | Hijau | 28 | Pagi |
-| 5 | Lagi | 13 | Siapa | 21 | Hitam | 29 | Siang |
-| 6 | Maaf | 14 | Kapan | 22 | Dengar | 30 | Sore |
-| 7 | Makan | 15 | Di mana | 23 | Berangkat | 31 | Malam |
+| Label | Kata    | Label | Kata         | Label | Kata      | Label | Kata     |
+| ----- | ------- | ----- | ------------ | ----- | --------- | ----- | -------- |
+| 0     | Air     | 8     | Motor        | 16    | Mengapa   | 24    | Datang   |
+| 1     | Belajar | 9     | Saya         | 17    | Bagaimana | 25    | Teman    |
+| 2     | Cari    | 10    | Terima kasih | 18    | Merah     | 26    | Keluarga |
+| 3     | Hari    | 11    | Tuli         | 19    | Kuning    | 27    | Rumah    |
+| 4     | Ingat   | 12    | Apa          | 20    | Hijau     | 28    | Pagi     |
+| 5     | Lagi    | 13    | Siapa        | 21    | Hitam     | 29    | Siang    |
+| 6     | Maaf    | 14    | Kapan        | 22    | Dengar    | 30    | Sore     |
+| 7     | Makan   | 15    | Di mana      | 23    | Berangkat | 31    | Malam    |
 
-*Catatan: kosakata ini kombinasi kata tanya, keseharian, keluarga, warna, dan waktu — cukup untuk menyusun kalimat sederhana yang meyakinkan saat demo (mis. "Saya makan pagi", "Terima kasih", "Kapan teman datang").*
+_Catatan: kosakata ini kombinasi kata tanya, keseharian, keluarga, warna, dan waktu — cukup untuk menyusun kalimat sederhana yang meyakinkan saat demo (mis. "Saya makan pagi", "Terima kasih", "Kapan teman datang")._
 
 ### Repo pendamping (kode siap pakai, bukan cuma dataset)
 
 Dataset ini punya repo resmi pendamping — [`AceKinnn/WL-BISINDO`](https://github.com/AceKinnn/WL-BISINDO) — yang berisi:
+
 - Script `organize_dataset.py` untuk split otomatis data train/test
-- Dua skema evaluasi: **Signer-Dependent (SD)** dan **Signer-Independent (SI)** — SI lebih relevan untuk IsyaratLive karena mensimulasikan pengguna baru yang belum pernah dilihat model
+- Dua skema evaluasi: **Signer-Dependent (SD)** dan **Signer-Independent (SI)** — SI lebih relevan untuk IsyaRasa karena mensimulasikan pengguna baru yang belum pernah dilihat model
 - Implementasi & hasil baseline tiga model:
 
-| Model | Basis Data | Akurasi SD | Akurasi SI (rata-rata) |
-|---|---|---|---|
-| SPOTER | Landmark pose | 93,75% | ~73% |
-| **Siformer** | Landmark pose | 93,54% | **~75% (terbaik untuk SI)** |
-| MViTv2 | Video RGB mentah | **97,08%** | — |
+| Model        | Basis Data       | Akurasi SD | Akurasi SI (rata-rata)      |
+| ------------ | ---------------- | ---------- | --------------------------- |
+| SPOTER       | Landmark pose    | 93,75%     | ~73%                        |
+| **Siformer** | Landmark pose    | 93,54%     | **~75% (terbaik untuk SI)** |
+| MViTv2       | Video RGB mentah | **97,08%** | —                           |
 
 **Model yang dipilih: Siformer atau SPOTER** (bukan MViTv2) — karena keduanya berbasis landmark pose, sejalan dengan pipeline MediaPipe yang sudah dirancang di Bagian 8, dan lebih ringan untuk diekspor ke TensorFlow.js agar berjalan di browser. MViTv2 memakai video RGB mentah langsung, lebih akurat tapi terlalu berat untuk inferensi real-time di browser.
 
@@ -222,17 +229,20 @@ Dataset ini punya repo resmi pendamping — [`AceKinnn/WL-BISINDO`](https://gith
 ## 10. Fitur
 
 ### MVP (wajib untuk demo)
-- [~] Room Lokal: kamera → deteksi isyarat real-time → teks tersusun rapi (LLM) → suara — *pipeline & UI lengkap dan dirapikan (§15.7), model klasifikasi gloss **v1/v2** nyata & terverifikasi benar-benar bisa dimuat browser (v3 dikeluarkan dari daftar karena rusak, lihat §15.8), bisa diuji akurasinya langsung dari UI ("Uji Akurasi Model"), tapi belum divalidasi end-to-end di environment produksi*
-- [~] Riwayat percakapan tersimpan, bisa di-scroll — *endpoint CRUD ada dan sekarang benar-benar dipakai (`RoomLocal` memuat riwayat saat dibuka), belum diuji terhadap MySQL sungguhan*
-- [x] Fallback mode degradasi saat koneksi terputus — *kode ada di `SignToTextMode.tsx`, tampilkan gloss mentah saat `/normalize` gagal, plus mode degradasi per-kata manual*
+
+- [~] Room Lokal: kamera → deteksi isyarat real-time → teks tersusun rapi (LLM) → suara — _pipeline & UI lengkap dan dirapikan (§15.7), model klasifikasi gloss **v1/v2** nyata & terverifikasi benar-benar bisa dimuat browser (v3 dikeluarkan dari daftar karena rusak, lihat §15.8), bisa diuji akurasinya langsung dari UI ("Uji Akurasi Model"), tapi belum divalidasi end-to-end di environment produksi_
+- [~] Riwayat percakapan tersimpan, bisa di-scroll — _endpoint CRUD ada dan sekarang benar-benar dipakai (`RoomLocal` memuat riwayat saat dibuka), belum diuji terhadap MySQL sungguhan_
+- [x] Fallback mode degradasi saat koneksi terputus — _kode ada di `SignToTextMode.tsx`, tampilkan gloss mentah saat `/normalize` gagal, plus mode degradasi per-kata manual_
 
 ### Pengembangan Lanjutan (jika waktu cukup)
-- [x] Mode 2: teks/suara → video isyarat (dictionary-based) — *32 video `.mp4` sudah direkam & tersedia di `frontend/public/dictionary/`, dictionary data sudah diperbaiki supaya cocok dengan file & label model (§15.7), terhubung di Room Lokal & `DictionaryModal.tsx`*
-- [x] Room Remote: panggilan video 1-lawan-1 antar 2 perangkat/lokasi (WebRTC + Socket.io) dengan deteksi isyarat & obrolan tersinkron — *lihat §5.3, pivot dari non-tujuan awal, dieksekusi 2026-08-10; TURN server belum disiapkan, lihat risiko §13*
+
+- [x] Mode 2: teks/suara → video isyarat (dictionary-based) — _32 video `.mp4` sudah direkam & tersedia di `frontend/public/dictionary/`, dictionary data sudah diperbaiki supaya cocok dengan file & label model (§15.7), terhubung di Room Lokal & `DictionaryModal.tsx`_
+- [x] Room Remote: panggilan video 1-lawan-1 antar 2 perangkat/lokasi (WebRTC + Socket.io) dengan deteksi isyarat & obrolan tersinkron — _lihat §5.3, pivot dari non-tujuan awal, dieksekusi 2026-08-10; TURN server belum disiapkan, lihat risiko §13_
 - [ ] Mode belajar isyarat (kamera memvalidasi gerakan pengguna untuk latihan)
-- [~] Integrasi Hermes Agent via Telegram untuk review riwayat — *service skeleton (`services/hermes.ts`) ada, belum tersambung/diuji*
+- [~] Integrasi Hermes Agent via Telegram untuk review riwayat — _service skeleton (`services/hermes.ts`) ada, belum tersambung/diuji_
 
 ### Di Luar Cakupan Kompetisi
+
 - Panggilan video multi-peserta (>2 orang) / fitur konferensi penuh (recording, breakout room, dsb) — Room Remote dibatasi 1-lawan-1
 - Avatar 3D animasi generatif
 - Dukungan kalimat kompleks multi-klausa
@@ -242,13 +252,14 @@ Dataset ini punya repo resmi pendamping — [`AceKinnn/WL-BISINDO`](https://gith
 
 ## 11. Metodologi & Timeline (±3 Bulan)
 
-| Bulan | Fokus | Target Selesai |
-|---|---|---|
+| Bulan   | Fokus                                                                                                                                                                                                   | Target Selesai                                                                                        |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | Bulan 1 | Unduh & fork WL-BISINDO + repo pendamping. Ekstrak landmark, latih ulang Siformer/SPOTER pada 32 kata dengan skema Signer-Independent. Ekspor ke TensorFlow.js dan validasi jalan real-time di browser. | Model klasifikasi gloss berjalan real-time di browser dengan akurasi terukur (target 80-90% skema SI) |
-| Bulan 2 | Bangun backend (endpoint normalisasi + integrasi 9Router). Desain prompt normalisasi gloss→kalimat. Integrasi TTS. Bangun UI React. | Alur end-to-end Mode 1 berjalan mulus dari kamera sampai suara |
-| Bulan 3 | Uji & perbaiki UX. (Jika waktu cukup) Mode 2. Susun video demo 10 menit. Siapkan kode sumber & dokumentasi untuk sesi tanya-jawab juri. | Sistem siap demo, video presentasi selesai |
+| Bulan 2 | Bangun backend (endpoint normalisasi + integrasi 9Router). Desain prompt normalisasi gloss→kalimat. Integrasi TTS. Bangun UI React.                                                                     | Alur end-to-end Mode 1 berjalan mulus dari kamera sampai suara                                        |
+| Bulan 3 | Uji & perbaiki UX. (Jika waktu cukup) Mode 2. Susun video demo 10 menit. Siapkan kode sumber & dokumentasi untuk sesi tanya-jawab juri.                                                                 | Sistem siap demo, video presentasi selesai                                                            |
 
 **Titik keputusan (decision gate):**
+
 - Jika akhir Bulan 1 model klasifikasi belum mencapai akurasi yang layak didemokan → pertimbangkan pivot ke model pretrained yang lebih matang atau kurangi jumlah kosakata target.
 - Jika integrasi TensorFlow.js bermasalah dari sisi performa di Bulan 1 → fallback ke inference di backend (trade-off: butuh koneksi internet terus-menerus, tapi arsitektur tetap valid).
 
@@ -256,26 +267,26 @@ Dataset ini punya repo resmi pendamping — [`AceKinnn/WL-BISINDO`](https://gith
 
 ## 12. Kesesuaian dengan Kriteria Penilaian GEMASTIK Divisi VIII
 
-| Kriteria Juri | Bagaimana IsyaratLive Memenuhi |
-|---|---|
-| Inovasi | Kombinasi CV + LLM untuk penerjemahan BISINDO kosakata (bukan alfabet) real-time dua arah — belum ada solusi sejenis yang publik |
-| Dampak & keberlanjutan | Aksesibilitas komunikasi bagi komunitas Tuli di layanan publik, sekolah, keluarga |
-| Usability/UX | Cukup buka browser, tanpa instalasi; antarmuka sederhana untuk dua pihak yang berhadapan |
-| Metodologi RPL | Dikembangkan dengan pendekatan iteratif, arsitektur modular (CV terpisah dari LLM), MVP jelas |
-| Urgensi masalah | Keterbatasan juru bahasa isyarat bersertifikat di Indonesia |
-| Kesesuaian tema ("Inklusif") | Langsung menyasar aksesibilitas difabel Tuli |
+| Kriteria Juri                | Bagaimana IsyaRasa Memenuhi                                                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Inovasi                      | Kombinasi CV + LLM untuk penerjemahan BISINDO kosakata (bukan alfabet) real-time dua arah — belum ada solusi sejenis yang publik |
+| Dampak & keberlanjutan       | Aksesibilitas komunikasi bagi komunitas Tuli di layanan publik, sekolah, keluarga                                                |
+| Usability/UX                 | Cukup buka browser, tanpa instalasi; antarmuka sederhana untuk dua pihak yang berhadapan                                         |
+| Metodologi RPL               | Dikembangkan dengan pendekatan iteratif, arsitektur modular (CV terpisah dari LLM), MVP jelas                                    |
+| Urgensi masalah              | Keterbatasan juru bahasa isyarat bersertifikat di Indonesia                                                                      |
+| Kesesuaian tema ("Inklusif") | Langsung menyasar aksesibilitas difabel Tuli                                                                                     |
 
 ---
 
 ## 13. Risiko & Mitigasi
 
-| Risiko | Dampak | Mitigasi |
-|---|---|---|
-| Dataset kosakata BISINDO terbatas | Model tidak akurat | Rekam dataset sendiri sejak Bulan 1, prioritaskan 50 kata paling sering dipakai |
-| Latensi LLM saat demo | Demo terganggu | 9Router menyediakan fallback multi-provider otomatis; gunakan model kecil/cepat untuk normalisasi kalimat pendek |
-| Performa TensorFlow.js di browser lambat | UX real-time terganggu | Uji lebih dini di Bulan 1; siapkan fallback inference di backend jika perlu |
-| BISINDO memiliki variasi regional | Model gagal generalisasi | Batasi scope ke BISINDO standar nasional, sebutkan sebagai batasan eksplisit di proposal |
-| Koneksi internet terputus saat demo | LLM tidak bisa dipanggil | Mode degradasi: tampilkan gloss mentah tanpa penyusunan kalimat |
+| Risiko                                                                                   | Dampak                                          | Mitigasi                                                                                                                                                                                                              |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dataset kosakata BISINDO terbatas                                                        | Model tidak akurat                              | Rekam dataset sendiri sejak Bulan 1, prioritaskan 50 kata paling sering dipakai                                                                                                                                       |
+| Latensi LLM saat demo                                                                    | Demo terganggu                                  | 9Router menyediakan fallback multi-provider otomatis; gunakan model kecil/cepat untuk normalisasi kalimat pendek                                                                                                      |
+| Performa TensorFlow.js di browser lambat                                                 | UX real-time terganggu                          | Uji lebih dini di Bulan 1; siapkan fallback inference di backend jika perlu                                                                                                                                           |
+| BISINDO memiliki variasi regional                                                        | Model gagal generalisasi                        | Batasi scope ke BISINDO standar nasional, sebutkan sebagai batasan eksplisit di proposal                                                                                                                              |
+| Koneksi internet terputus saat demo                                                      | LLM tidak bisa dipanggil                        | Mode degradasi: tampilkan gloss mentah tanpa penyusunan kalimat                                                                                                                                                       |
 | Room Remote: WebRTC gagal connect di jaringan NAT/firewall ketat (belum ada TURN server) | Panggilan video antar 2 device gagal tersambung | Jangan jadikan Room Remote taruhan demo utama — Room Lokal (1 perangkat) tetap fondasi demo yang pasti jalan; tambahkan TURN (`coturn` self-host, gratis) sebelum mengandalkan Room Remote di jaringan tak terkontrol |
 
 ---
@@ -296,7 +307,7 @@ Bagian ini menerjemahkan Bagian 11 (Timeline) menjadi tugas konkret berurutan, s
 ### 15.1 Struktur Folder Proyek
 
 ```
-isyaratlive/
+IsyaRasa/
 ├── ml/                          # Training model (Python, lokal/Colab)
 │   ├── dataset/                 # Hasil unduhan WL-BISINDO + organize_dataset.py
 │   ├── preprocessing/           # Ekstraksi landmark (MediaPipe Python)
@@ -327,18 +338,20 @@ isyaratlive/
 │   └── package.json
 ├── dictionary/                   # Video/GIF isyarat untuk Mode 2 (32 kata)
 └── docs/
-    └── PRD_IsyaratLive.md        # Dokumen ini
+    └── PRD_IsyaRasa.md        # Dokumen ini
 ```
 
 ### 15.2 Urutan Kerja (Checklist Berurutan)
 
-**FASE 0 — Setup** ✅ *selesai*
+**FASE 0 — Setup** ✅ _selesai_
+
 - [x] Inisialisasi repo Git, struktur folder sesuai 15.1
 - [x] Setup proyek frontend — Vite + React-TS, `@mediapipe/tasks-vision`, `@tensorflow/tfjs`, Tailwind terpasang (`npm install` bersih, `tsc --noEmit` tanpa error, `npm run dev` jalan di :5173)
 - [x] Setup proyek backend — Express, dotenv, mysql2 terpasang (`npm install` bersih, `tsc --noEmit` tanpa error, `npm run dev` jalan di :3001)
 - [ ] Setup lingkungan Python (`ml/`) — `venv` belum dibuat/divalidasi; `requirements.txt` ada tapi belum `pip install`
 
-**FASE 1 — Model & Dataset (Bulan 1)** ❌ *belum dieksekusi — blocker utama saat ini*
+**FASE 1 — Model & Dataset (Bulan 1)** ❌ _belum dieksekusi — blocker utama saat ini_
+
 - [x] Notebook Colab end-to-end disiapkan (`ml/colab/train_gloss_classifier.ipynb`) — mencakup seluruh langkah di bawah, siap dijalankan begitu ada `kaggle.json`. Dipakai karena drive lokal tim (C:) nyaris penuh (1.7GB tersisa dari 459GB) sehingga instalasi `ml/venv` lokal (butuh ~3GB) gagal
 - [ ] Unduh dataset WL-BISINDO dari Kaggle (`glennleonali/wl-bisindo`)
 - [ ] Clone/fork repo `AceKinnn/WL-BISINDO`, salin `organize_dataset.py` + metadata JSON ke `ml/dataset/` (script ada di `ml/dataset/organize_dataset.py`, belum dijalankan — belum ada dataset)
@@ -350,14 +363,16 @@ isyaratlive/
 - [ ] Salin hasil export ke `frontend/public/models/` — folder `frontend/public/models/gloss-classifier/` masih kosong; `GlossClassifier.tsx` sudah siap load model dari path ini begitu tersedia
 - [ ] **Validasi checkpoint**: buat halaman test sederhana di frontend yang load model TFJS + `@mediapipe/tasks-vision` HandLandmarker, uji real-time di browser dengan minimal 5 kata sampel — **belum bisa dilakukan tanpa model terlatih**
 
-**FASE 2 — Backend & Integrasi LLM (Bulan 2, minggu 1-2)** 🟡 *skeleton lengkap, belum diuji dengan kredensial asli*
+**FASE 2 — Backend & Integrasi LLM (Bulan 2, minggu 1-2)** 🟡 _skeleton lengkap, belum diuji dengan kredensial asli_
+
 - [x] Buat endpoint `POST /normalize` di backend — terima array gloss, panggil 9Router (`backend/src/routes/normalize.ts` + `services/9router.ts`)
 - [ ] Desain & uji prompt normalisasi gloss→kalimat (1 versi prompt sudah ada di `services/9router.ts`, belum diiterasi/dibandingkan dengan variasi lain karena belum ada API key 9Router asli untuk uji coba)
 - [x] Setup koneksi MySQL, skema tabel riwayat percakapan (`backend/src/db/schema.sql`, `db/index.ts`) — kode ada, belum divalidasi terhadap instance MySQL sungguhan
 - [x] Buat endpoint CRUD riwayat (`GET/POST /history` di `backend/src/routes/history.ts`)
 - [ ] Uji fallback: matikan koneksi ke 9Router secara sengaja, pastikan backend merespons error yang bisa ditangani frontend (bukan crash) — logika error sudah ada (`NineRouterError`), belum diuji end-to-end
 
-**FASE 3 — Frontend Mode 1 End-to-End (Bulan 2, minggu 3-4)** 🟡 *skeleton lengkap, belum divalidasi dengan model asli*
+**FASE 3 — Frontend Mode 1 End-to-End (Bulan 2, minggu 3-4)** 🟡 _skeleton lengkap, belum divalidasi dengan model asli_
+
 - [x] `CameraCapture` — minta izin kamera, render video stream
 - [x] `LandmarkDetector` — integrasi `HandLandmarker` mode video real-time
 - [x] `GlossClassifier` — buffer landmark sequence, jalankan inferensi TFJS, keluarkan gloss (logika ada, tapi model TFJS yang di-load masih placeholder/belum ada — lihat Fase 1)
@@ -366,13 +381,15 @@ isyaratlive/
 - [x] Implementasi mode degradasi: jika `/normalize` gagal, tampilkan gloss mentah langsung
 - [ ] **Validasi checkpoint**: alur lengkap kamera → suara berjalan tanpa error untuk 32 kata target — **belum bisa divalidasi, menunggu model asli dari Fase 1**
 
-**FASE 4 — Mode 2 & Penyempurnaan (Bulan 3, jika waktu cukup)** 🟡 *UI ada, aset belum*
+**FASE 4 — Mode 2 & Penyempurnaan (Bulan 3, jika waktu cukup)** 🟡 _UI ada, aset belum_
+
 - [ ] Siapkan/rekam 32 video/GIF isyarat pendek untuk dictionary Mode 2 — folder `dictionary/` masih kosong (hanya `.gitkeep`)
 - [x] `TextToSignMode` — Web Speech API (STT) atau input teks → pecah kata kunci → mapping ke dictionary → tampilkan berurutan (kode ada di `TextToSignMode.tsx`, tidak bisa ditampilkan penuh tanpa video dictionary)
 - [ ] Polish UI/UX, uji dengan pengguna di luar tim jika memungkinkan
 - [~] (Opsional) Integrasi Hermes Agent untuk akses riwayat via Telegram — service skeleton (`services/hermes.ts`) ada, belum tersambung ke bot Telegram sungguhan
 
-**FASE 5 — Deployment & Demo (Bulan 3, minggu terakhir)** ❌ *belum dimulai*
+**FASE 5 — Deployment & Demo (Bulan 3, minggu terakhir)** ❌ _belum dimulai_
+
 - [ ] Deploy frontend (build statis) ke VPS `vmi3108861` atau `newgabungan`
 - [ ] Deploy backend Node.js, setup reverse proxy OpenLiteSpeed
 - [ ] Pasang HTTPS (Let's Encrypt) — wajib untuk akses kamera browser
@@ -392,12 +409,12 @@ isyaratlive/
 
 ### 15.3 Dependensi Kunci per Tahap
 
-| Fase | Blocker jika gagal | Rencana mitigasi |
-|---|---|---|
+| Fase   | Blocker jika gagal                         | Rencana mitigasi                                                                                    |
+| ------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
 | Fase 1 | Model tidak cukup akurat setelah fine-tune | Kurangi jumlah kata target dari 32 ke subset lebih kecil (mis. 15-20 kata dengan akurasi tertinggi) |
-| Fase 1 | Ekspor ke TensorFlow.js gagal/tidak stabil | Fallback: jalankan inferensi di backend (trade-off butuh koneksi terus-menerus) |
-| Fase 2 | Prompt normalisasi 9Router tidak konsisten | Iterasi prompt dengan few-shot examples, uji dengan variasi urutan gloss |
-| Fase 3 | Performa real-time di browser lambat | Turunkan resolusi input kamera, kurangi frekuensi sampling frame |
+| Fase 1 | Ekspor ke TensorFlow.js gagal/tidak stabil | Fallback: jalankan inferensi di backend (trade-off butuh koneksi terus-menerus)                     |
+| Fase 2 | Prompt normalisasi 9Router tidak konsisten | Iterasi prompt dengan few-shot examples, uji dengan variasi urutan gloss                            |
+| Fase 3 | Performa real-time di browser lambat       | Turunkan resolusi input kamera, kurangi frekuensi sampling frame                                    |
 
 ### 15.4 Catatan untuk Eksekusi oleh Claude Code
 
@@ -411,10 +428,12 @@ isyaratlive/
 Anggota tim lain (`habib`, commit `0f930ef`) mendorong progres besar di luar sesi Claude Code ini: dictionary Mode 2 (32 video), beberapa iterasi model klasifikasi gloss (v1-v6), gestur mulai/stop, motion-detection buffer, EMA smoothing. Diaudit langsung (baca kode + cek hash file, bukan asumsi) — hasilnya **campuran: sebagian nyata dan berfungsi, sebagian tampilan UI yang tidak terhubung ke apa pun**.
 
 **Nyata & berfungsi:**
+
 - Model **v1, v2, v3** — checkpoint `.keras` di `ml/checkpoints/` punya MD5 hash berbeda satu sama lain (bukan duplikat), dan masing-masing punya file TFJS lengkap (`model.json` + `.bin`) di `frontend/public/models/gloss-classifier{,-v2,-v3}/`.
 - Dictionary Mode 2 — 32 file `.mp4` di `frontend/public/dictionary/`, sesuai 32 kosakata PRD.
 
 **Bermasalah — ditemukan lewat pengecekan langsung, bukan sekadar baca kode:**
+
 1. **Model default di UI (v6) tidak pernah ada.** `SignToTextMode.tsx` set default `modelVer = 'v6'` dengan badge "👑 Supreme Pinnacle 320D — 99.69% Akurat", tapi folder `frontend/public/models/gloss-classifier-v6/` tidak ada sama sekali. `loadGlossModel()` gagal lalu diam-diam fallback v6→v5→v4→v3, akhirnya jalan di v3 — **tanpa memberi tahu pengguna**, badge tetap menampilkan "v6 (99.69%)" walau model yang jalan sebenarnya v3.
 2. **Model v5 adalah file yang salah label.** `ml/checkpoints/v5/best.keras` **byte-identik** (MD5 sama persis) dengan checkpoint v1/root — artinya tidak pernah benar-benar dilatih ulang dengan pipeline 256D yang diklaim. Folder TFJS-nya di frontend cuma berisi `test.txt` (isi: `"hello"`), bukan model asli.
 3. **Model v4 tidak pernah dilatih sama sekali** — script (`train_v4.py`, `export_v4_direct.py`, `extract_landmarks_v4.py`) ada, tapi tidak ada checkpoint maupun folder model TFJS di mana pun di repo.
@@ -427,25 +446,30 @@ Anggota tim lain (`habib`, commit `0f930ef`) mendorong progres besar di luar ses
 Menindaklanjuti audit §15.6, dikerjakan dalam sesi yang sama:
 
 **Bug diperbaiki (bukan hanya didokumentasikan — kali ini langsung dibetulkan):**
+
 - `frontend/src/lib/signDictionary.ts` — **daftar 32 kata untuk Mode 2/Dictionary Modal tidak sama sekali dengan 32 kata yang dikenali model** (bandingkan dengan `GLOSS_LABELS`) dan menunjuk ke file video yang tidak ada di `frontend/public/dictionary/` (mis. `ada.mp4`, `bantu.mp4`, `cinta.mp4` — tidak pernah direkam). Ditulis ulang total supaya `id` sejajar dengan indeks `GLOSS_LABELS`, dan `videoUrl` cocok dengan 32 file `.mp4` yang benar-benar ada.
 - `GlossClassifier.tsx` — `loadGlossModel()` dirapikan: hanya mengenal v1/v2/v3 yang nyata, default `LATEST_GLOSS_MODEL = 'v3'`, tanpa fallback diam-diam ke model lain. **`GlossSequenceBuffer`, semua fungsi `landmarksTo*Vector`, dan algoritma `classify()` (threshold, cooldown, motion-gating) TIDAK diubah sama sekali** — sesuai instruksi eksplisit tim agar logika deteksi gerakan yang sudah divalidasi tidak disentuh.
 
 **UI dirombak (redesign, satu warna aksen teal, tanpa gradien pelangi/neon):**
+
 - Token desain terpusat di `frontend/src/index.css` (`.card`, `.btn-primary/secondary/danger`, `.badge-*`, `.tab-pill*`, `.input`).
 - Semua gradien multi-warna & badge akurasi palsu (v4/v5/v6, "Supreme Pinnacle", crown emoji) dihapus dari `SignToTextMode.tsx`.
 - Warna overlay skeleton kamera (magenta/violet neon) diredam ke palet teal/slate — ini murni warna canvas, tidak memengaruhi data landmark.
 
 **Fitur baru — "Room" (lihat §5.3 untuk keputusan produk):**
+
 - `frontend/src/rooms/RoomLocal.tsx` — Room Lokal: kamera→teks dan teks→isyarat sekarang satu room dengan **feed obrolan bersama** (bukan dua tab terpisah tanpa histori gabungan), memuat riwayat dari `GET /api/history` saat dibuka.
 - `frontend/src/rooms/RoomRemote.tsx` + `backend/src/signaling.ts` — Room Remote: panggilan video WebRTC 1-lawan-1 dengan signaling Socket.io, memakai pipeline deteksi yang identik dengan Room Lokal.
 - `frontend/src/components/AccuracyTestPanel.tsx` + `frontend/src/lib/modelSelfTest.ts` — panel "Uji Akurasi Model": menjalankan tiap model (v1/v2/v3) terhadap 32 video dictionary sebagai ground-truth pengganti, langsung di browser, supaya angka akurasi yang tampil **selalu hasil pengukuran nyata**, bukan ditulis manual. Secara eksplisit diberi label "sanity check", **bukan pengganti** evaluasi Signer-Independent resmi yang seharusnya dilakukan saat training di `ml/` (lihat §9).
 
 **Testing ditambahkan (baru, sebelumnya nol test di kedua proyek):**
+
 - Frontend: Vitest, 27 test — `signDictionary.test.ts` (parsing kalimat, integritas 32 label/video), `GlossClassifier.test.ts` (bentuk vector 126D/160D, state machine `GlossSequenceBuffer`, resampling) — **hanya menguji perilaku yang sudah ada, tidak mengubah logikanya**. Jalankan: `cd frontend && npm test`.
 - Backend: Vitest + Supertest, 10 test — validasi `/api/normalize` dan `/api/history`, termasuk memastikan server merespons error terstruktur (502/500) alih-alih crash saat 9Router/MySQL tidak tersedia. `backend/src/index.ts` dipecah jadi `app.ts` (Express app, testable) + `index.ts` (bootstrap `listen()`) supaya bisa dites tanpa membuka port asli. Jalankan: `cd backend && npm test`.
 - Diverifikasi end-to-end: `tsc -b`/`tsc --noEmit` bersih di kedua proyek, `npm run build` (frontend) sukses, `npm run dev` (frontend & backend) sama-sama start tanpa error, `oxlint` hanya menyisakan 3 warning pra-eksisting yang tidak terkait perubahan sesi ini.
 
 **Belum dikerjakan (di luar sesi ini):**
+
 - TURN server untuk Room Remote (lihat risiko §13) — tanpa itu, panggilan bisa gagal connect di jaringan NAT ketat.
 - Rekonsiliasi v4/v5/v6 dari §15.6 (masih belum ada model v4/v5/v6 yang nyata).
 - Deployment ke VPS (Fase 5) belum dimulai — tapi file persiapannya sudah ada (§15.9).

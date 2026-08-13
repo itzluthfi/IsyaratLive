@@ -1,8 +1,8 @@
 @echo off
-REM Setup awal IsyaratLive — jalankan sekali di awal, atau setiap kali package.json berubah.
+REM Setup awal IsyaRasa — jalankan sekali di awal, atau setiap kali package.json berubah.
 
 echo ===============================
-echo IsyaratLive - Setup
+echo IsyaRasa - Setup
 echo ===============================
 
 echo.

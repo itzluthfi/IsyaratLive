@@ -1,9 +1,10 @@
-# Deploy IsyaratLive (Docker)
+# Deploy IsyaRasa (Docker)
 
 Arsitektur: **Caddy** (edge, HTTPS otomatis via Let's Encrypt) → **frontend**
 (Nginx, static build + proxy `/api` & `/socket.io`) → **backend** (Node/Express
-+ Socket.io) → **MySQL**. Semua di 4 container lewat `docker-compose.yml` di
-root repo.
+
+- Socket.io) → **MySQL**. Semua di 4 container lewat `docker-compose.yml` di
+  root repo.
 
 ```
 Internet ──HTTPS──▶ Caddy ──▶ frontend (Nginx) ──/api,/socket.io──▶ backend ──▶ mysql
@@ -30,8 +31,8 @@ Internet ──HTTPS──▶ Caddy ──▶ frontend (Nginx) ──/api,/socke
 ## Langkah deploy
 
 ```bash
-git clone <url-repo-kamu> isyaratlive
-cd isyaratlive
+git clone <url-repo-kamu> IsyaRasa
+cd IsyaRasa
 
 # 1. Variabel level-compose (domain, email Let's Encrypt, password MySQL)
 cp .env.example .env

@@ -1,14 +1,20 @@
 @import "tailwindcss";
 
 /*
- * Sistem desain IsyaratLive — Clean Light Mode (gaya Vercel / Linear / Radix UI).
+ * Sistem desain IsyaRasa — Clean Light Mode (gaya Vercel / Linear / Radix UI).
  * Menggunakan palet netral slate-zinc, kontras tinggi, border 1px presisi,
  * dan warna semantik terbatas (emerald = connected/active, amber = offline/degraded, slate-900 = primary).
  */
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   background-color: #f8fafc;
   color: #0f172a;
 }
@@ -86,4 +92,3 @@ body {
     @apply w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder-slate-400 transition-colors focus:border-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-800;
   }
 }
-

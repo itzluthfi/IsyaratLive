@@ -1,6 +1,6 @@
-# Frontend IsyaratLive — React + Vite, di-build jadi static file lalu
+# Frontend IsyaRasa — React + Vite, di-build jadi static file lalu
 # di-serve + di-proxy (ke backend) oleh Nginx.
-# Build: docker build -t isyaratlive-frontend ./frontend
+# Build: docker build -t IsyaRasa-frontend ./frontend
 
 FROM node:20-alpine AS build
 WORKDIR /app

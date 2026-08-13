@@ -1,14 +1,16 @@
-import 'dotenv/config'
-import { createServer } from 'node:http'
-import { createApp } from './app.js'
-import { attachSignaling } from './signaling.js'
+import "dotenv/config";
+import { createServer } from "node:http";
+import { createApp } from "./app.js";
+import { attachSignaling } from "./signaling.js";
 
-const PORT = Number(process.env.PORT ?? 3001)
+const PORT = Number(process.env.PORT ?? 3001);
 
-const app = createApp()
-const httpServer = createServer(app)
-attachSignaling(httpServer)
+const app = createApp();
+const httpServer = createServer(app);
+attachSignaling(httpServer);
 
 httpServer.listen(PORT, () => {
-  console.log(`IsyaratLive backend listening on port ${PORT} (HTTP + Socket.io signaling)`)
-})
+  console.log(
+    `IsyaRasa backend listening on port ${PORT} (HTTP + Socket.io signaling)`,
+  );
+});
