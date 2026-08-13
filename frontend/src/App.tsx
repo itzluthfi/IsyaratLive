@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Home, Video, PhoneCall, BookOpen, BarChart2 } from 'lucide-react'
+import { Home, Video, PhoneCall, BookOpen } from 'lucide-react'
 import { RoomLocal } from './rooms/RoomLocal'
 import { DictionaryModal } from './components/DictionaryModal'
 import { LandingPage } from './components/LandingPage'
@@ -37,7 +37,7 @@ function App() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">IsyaRasa</h1>
-                <span className="badge-active text-[10px] py-0 px-2">v2.4 Ready</span>
+                <span className="badge-active text-[10px] py-0 px-2">Siap Digunakan</span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
                 Penerjemah Bahasa Isyarat
@@ -71,9 +71,6 @@ function App() {
 
             <button onClick={() => setIsDictionaryOpen(true)} className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3">
               <BookOpen className="w-3.5 h-3.5" /> Kamus 32 Kata
-            </button>
-            <button onClick={() => setIsAccuracyOpen(true)} className="btn-secondary text-xs flex items-center gap-1.5 py-1.5 px-3">
-              <BarChart2 className="w-3.5 h-3.5" /> Tes Akurasi AI
             </button>
           </div>
         </div>
