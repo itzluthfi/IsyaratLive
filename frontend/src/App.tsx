@@ -23,7 +23,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased pb-12">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans antialiased">
       {/* Top Navigation Header */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
@@ -74,7 +74,7 @@ function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
+      <main className="flex-1 w-full mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
         {viewMode === 'landing' && (
           <LandingPage
             onStartLocalRoom={() => setViewMode('local')}
@@ -96,7 +96,7 @@ function App() {
       </main>
 
       {/* Simple Dataset License Footer */}
-      <footer className="mt-auto border-t border-slate-200/80 bg-white py-4">
+      <footer className="w-full border-t border-slate-200/80 bg-white py-4 mt-auto">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-start gap-3 text-xs text-slate-500 font-medium">
           {/* Slot/Placeholder Logo BISINDO */}
           <div className="flex h-6 w-6 items-center justify-center rounded bg-slate-100 border border-slate-200 text-slate-500 overflow-hidden text-[10px] font-bold shrink-0">
