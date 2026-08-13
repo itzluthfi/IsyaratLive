@@ -681,27 +681,33 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
             RR
           </div>
           <div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-base font-bold text-slate-900 leading-none">Panggilan Video IsyaRasa</h2>
-              <div className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1 text-white border border-slate-800 shadow-xs">
-                <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">KODE:</span>
-                <span className="font-mono text-xs font-bold tracking-widest text-teal-300">{roomCode}</span>
-                <button
-                  onClick={handleCopyRoomCode}
-                  className="ml-1 flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-slate-200 hover:bg-slate-700 hover:text-white active:scale-95 transition-all border border-slate-700"
-                  title="Salin Kode Room"
-                >
-                  {isCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  <span>{isCopied ? 'Tersalin' : 'Salin Kode'}</span>
-                </button>
-                <button
-                  onClick={handleCopyDirectLink}
-                  className="flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] font-semibold text-teal-300 hover:bg-slate-700 hover:text-white active:scale-95 transition-all border border-slate-700"
-                  title="Salin Tautan Langsung Room"
-                >
-                  {isLinkCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Link className="w-3 h-3" />}
-                  <span>{isLinkCopied ? 'Link Tersalin' : 'Salin Link'}</span>
-                </button>
+              
+              {/* Prominent Large Room Code Badge & Icon-Only Copy Buttons */}
+              <div className="flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-1.5 text-white border border-slate-800 shadow-sm">
+                <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">KODE:</span>
+                <span className="font-mono text-base font-extrabold tracking-widest text-teal-300 select-all">{roomCode}</span>
+                
+                <div className="flex items-center gap-1 border-l border-slate-700/80 pl-2 ml-1">
+                  {/* Icon-Only Copy Code Button */}
+                  <button
+                    onClick={handleCopyRoomCode}
+                    className="p-1 rounded-md bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white active:scale-95 transition-all border border-slate-700/60"
+                    title="Salin Kode Room"
+                  >
+                    {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  </button>
+
+                  {/* Icon-Only Copy Direct Link Button */}
+                  <button
+                    onClick={handleCopyDirectLink}
+                    className="p-1 rounded-md bg-slate-800 text-teal-300 hover:bg-slate-700 hover:text-white active:scale-95 transition-all border border-slate-700/60"
+                    title="Salin Tautan Langsung Room"
+                  >
+                    {isLinkCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Link className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-1">Penerjemah Bahasa Isyarat 1-Lawan-1</p>
