@@ -309,11 +309,26 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   }
 
   async function connectSocket(): Promise<Socket> {
-    if (socketRef.current) return socketRef.current
-    const socket = io({ path: '/socket.io' })
+    if (socketRef.current?.connected) return socketRef.current
+    if (socketRef.current) socketRef.current.disconnect()
+
+    const socket = io({ path: '/socket.io', timeout: 5000 })
     socketRef.current = socket
-    return new Promise((resolve) => {
-      socket.on('connect', () => resolve(socket))
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error('Gagal terhubung ke backend signaling (timeout 5s). Pastikan backend running di port 3001.'))
+      }, 5000)
+
+      socket.on('connect', () => {
+        clearTimeout(timer)
+        resolve(socket)
+      })
+
+      socket.on('connect_error', (err) => {
+        clearTimeout(timer)
+        reject(new Error(`Gagal terhubung ke backend signaling: ${err.message}. Pastikan backend running di port 3001.`))
+      })
     })
   }
 
