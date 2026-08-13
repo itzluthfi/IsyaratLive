@@ -23,7 +23,8 @@ import {
 } from '../components/GlossClassifier'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory } from '../lib/api'
-import { Hand, MessageSquare, Play, Square, PhoneOff, Copy, Check, Wifi, WifiOff, Pin, AlertTriangle, Mic, MicOff, Video, VideoOff, Clock, Link, LayoutGrid, Grid } from 'lucide-react'
+import { SIGN_DICTIONARY_MAP, SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
+import { Hand, MessageSquare, Play, Square, PhoneOff, Copy, Check, Wifi, WifiOff, Pin, AlertTriangle, Mic, MicOff, Video, VideoOff, Clock, Link, LayoutGrid, Grid, Film } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -74,6 +75,44 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
+
+  // State Text-to-Sign Video Demonstration Modal
+  const [videoModalQueue, setVideoModalQueue] = useState<{ label: string; url: string }[]>([])
+  const [currentVideoIdx, setCurrentVideoIdx] = useState(0)
+  const [showVideoModal, setShowVideoModal] = useState(false)
+
+  const playTextAsSignVideo = (text: string) => {
+    if (!text.trim()) return
+    const rawWords = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
+    const queue: { label: string; url: string }[] = []
+
+    for (const w of rawWords) {
+      if (SIGN_DICTIONARY_MAP[w]) {
+        const item = SIGN_DICTIONARY_DATA.find(
+          (d) => d.cleanKey === w || d.label.toLowerCase() === w
+        )
+        if (item) {
+          queue.push({ label: item.label, url: item.videoUrl })
+        }
+      }
+    }
+
+    if (queue.length === 0) {
+      toast.error(`Tidak ada peragaan video isyarat untuk kata: "${text}"`, { id: 'no-sign-video' })
+      return
+    }
+
+    setVideoModalQueue(queue)
+    setCurrentVideoIdx(0)
+    setShowVideoModal(true)
+    toast.success(`Memutar ${queue.length} peragaan video isyarat BISINDO…`, { id: 'sign-video-playing' })
+  }
+
+  const handleVideoEnded = () => {
+    if (currentVideoIdx < videoModalQueue.length - 1) {
+      setCurrentVideoIdx((prev) => prev + 1)
+    }
+  }
 
   // Timer Panggilan Video (Aktif Saat Connected)
   useEffect(() => {
@@ -1104,11 +1143,20 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                     </span>
                   </div>
                   <p className="text-xs font-medium leading-relaxed">{m.text}</p>
+                  <button
+                    onClick={() => playTextAsSignVideo(m.text)}
+                    className={`mt-1.5 flex items-center gap-1 text-[10px] font-semibold hover:underline ${
+                      m.from === 'me' ? 'text-teal-400 hover:text-teal-300' : 'text-teal-600 hover:text-teal-700'
+                    }`}
+                  >
+                    <Film className="w-3 h-3" />
+                    <span>Peragakan Video Isyarat</span>
+                  </button>
                 </div>
               ))}
             </div>
 
-            {/* Input Form */}
+            {/* Input Form dengan Tombol Peragakan Video Isyarat */}
             <div className="pt-2 border-t border-slate-100 flex gap-2">
               <input
                 className="input text-xs"
@@ -1117,6 +1165,14 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                 onChange={(e) => setTextInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && sendText()}
               />
+              <button
+                onClick={() => playTextAsSignVideo(textInput)}
+                className="btn-secondary text-xs shrink-0 px-2.5 flex items-center gap-1 font-semibold text-teal-700 border-teal-200 bg-teal-50 hover:bg-teal-100"
+                title="Peragakan Teks Sebagai Video Isyarat BISINDO"
+              >
+                <Film className="w-3.5 h-3.5 text-teal-600" />
+                <span className="hidden sm:inline">Peragakan</span>
+              </button>
               <button onClick={sendText} className="btn-primary text-xs shrink-0 px-3">
                 Kirim
               </button>
@@ -1124,6 +1180,67 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
           </div>
         </div>
       </div>
+
+      {/* Modal Peragaan Video Isyarat BISINDO (Mode Teks ke Isyarat Video) */}
+      {showVideoModal && videoModalQueue.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="card max-w-lg w-full p-5 space-y-4 shadow-2xl border border-slate-800 bg-slate-900 text-white">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Film className="w-4.5 h-4.5 text-teal-400" />
+                <h3 className="text-sm font-bold">Peragaan Video Isyarat BISINDO</h3>
+              </div>
+              <button
+                onClick={() => setShowVideoModal(false)}
+                className="text-slate-400 hover:text-white font-bold text-sm px-2 py-1 rounded-lg hover:bg-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Video Player Clip */}
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black border border-slate-800 shadow-inner">
+              <video
+                key={videoModalQueue[currentVideoIdx].url}
+                src={videoModalQueue[currentVideoIdx].url}
+                autoPlay
+                onEnded={handleVideoEnded}
+                controls
+                className="h-full w-full object-contain"
+              />
+              <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-teal-300 border border-slate-700/60">
+                Kata: {videoModalQueue[currentVideoIdx].label.toUpperCase()} ({currentVideoIdx + 1}/{videoModalQueue.length})
+              </div>
+            </div>
+
+            {/* Playlist Kata Badges & Tutup */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {videoModalQueue.map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentVideoIdx(idx)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                      idx === currentVideoIdx
+                        ? 'bg-teal-600 text-white border-teal-500 shadow-sm'
+                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowVideoModal(false)}
+                className="btn-secondary text-xs px-3 py-1.5 font-semibold text-slate-300 border-slate-700 bg-slate-800 hover:bg-slate-700"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Konfirmasi Keluar Room / Mengakhiri Panggilan */}
       {showLeaveConfirm && (
