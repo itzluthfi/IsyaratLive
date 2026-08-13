@@ -23,7 +23,7 @@ import {
 } from '../components/GlossClassifier'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory } from '../lib/api'
-import { Hand, MessageSquare, Play, Square, PhoneOff, Copy, Check, Wifi, WifiOff, Pin, Maximize2, AlertTriangle, Mic, MicOff, Video, VideoOff, Clock, Link } from 'lucide-react'
+import { Hand, MessageSquare, Play, Square, PhoneOff, Copy, Check, Wifi, WifiOff, Pin, AlertTriangle, Mic, MicOff, Video, VideoOff, Clock, Link, LayoutGrid, Grid } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
@@ -69,6 +69,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   const [isCopied, setIsCopied] = useState(false)
   const [isLinkCopied, setIsLinkCopied] = useState(false)
   const [pinnedView, setPinnedView] = useState<'remote' | 'local'>('remote')
+  const [layoutMode, setLayoutMode] = useState<'hero' | 'equal'>('hero')
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [isVideoOff, setIsVideoOff] = useState(false)
@@ -788,117 +789,134 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
         {/* Left 2 Columns: Video Stage & Floating Action Bar */}
         <div className="lg:col-span-2 space-y-4">
           <div className="relative rounded-2xl bg-white border border-slate-200 p-3 shadow-xs space-y-3">
-            {/* Video Call Stage — Dual Camera Layout dengan Fitur Sematkan (Pin Camera) */}
+            {/* Video Call Stage — Dual Camera Layout (Dua Mode: Hero vs Sama Besar) */}
             <div className="space-y-3">
-              {/* 1. Main Featured Video Frame (Sesuai Pilihan Pin: Lawan Bicara / Saya Lokal) */}
-              <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
-                {pinnedView === 'remote' ? (
-                  <>
+              {layoutMode === 'equal' ? (
+                /* Mode 2: Kamera Ukuran Sama Besar (Side-by-side / Stacked 50-50) */
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Camera 1: Saya (Lokal) */}
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                    <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
+                    <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+                    <div className="absolute top-2.5 left-2.5 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-semibold border border-slate-700/60 flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-teal-400"></span>
+                      <span>Saya (Lokal)</span>
+                    </div>
+                  </div>
+
+                  {/* Camera 2: Lawan Bicara */}
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
                     <video ref={remoteVideoRef} className="h-full w-full object-cover" playsInline autoPlay />
-                    <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 flex items-center gap-2">
+                    <div className="absolute top-2.5 left-2.5 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-full text-white text-[11px] font-semibold border border-slate-700/60 flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
-                      <span>Lawan Bicara (Utama)</span>
+                      <span>Lawan Bicara</span>
                     </div>
                     {status !== 'connected' && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950/90 text-xs p-6 text-center">
-                        <p className="font-semibold text-slate-200">Menunggu Lawan Bicara Bergabung</p>
-                        <p className="text-slate-400 mt-1 max-w-xs">
-                          Bagikan kode room <strong className="text-teal-300 font-mono bg-slate-800 px-2 py-0.5 rounded font-bold tracking-wider">{roomCode}</strong> untuk memulai panggilan video.
-                        </p>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950/90 text-xs p-4 text-center">
+                        <p className="font-semibold text-slate-200">Menunggu Lawan Bicara</p>
                         <button
                           onClick={handleCopyRoomCode}
-                          className="mt-3 flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all"
+                          className="mt-2 text-[11px] font-bold text-teal-400 hover:underline flex items-center gap-1"
                         >
-                          {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                          <span>{isCopied ? 'Kode Room Tersalin!' : 'Salin Kode Room'}</span>
+                          <Copy className="w-3 h-3" />
+                          <span>Salin Kode ({roomCode})</span>
                         </button>
                       </div>
                     )}
-                  </>
-                ) : (
-                  <>
-                    <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
-                    <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-                    <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-teal-400"></span>
-                      <span>Saya (Lokal - Disematkan)</span>
-                    </div>
-                  </>
-                )}
+                  </div>
+                </div>
+              ) : (
+                /* Mode 1: Hero Featured Frame + Thumbnail Secondary */
+                <>
+                  <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                    {pinnedView === 'remote' ? (
+                      <>
+                        <video ref={remoteVideoRef} className="h-full w-full object-cover" playsInline autoPlay />
+                        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+                          <span>Lawan Bicara (Utama)</span>
+                        </div>
+                        {status !== 'connected' && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950/90 text-xs p-6 text-center">
+                            <p className="font-semibold text-slate-200">Menunggu Lawan Bicara Bergabung</p>
+                            <p className="text-slate-400 mt-1 max-w-xs">
+                              Bagikan kode room <strong className="text-teal-300 font-mono bg-slate-800 px-2 py-0.5 rounded font-bold tracking-wider">{roomCode}</strong> untuk memulai panggilan video.
+                            </p>
+                            <button
+                              onClick={handleCopyRoomCode}
+                              className="mt-3 flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-teal-500 active:scale-95 transition-all"
+                            >
+                              {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                              <span>{isCopied ? 'Kode Room Tersalin!' : 'Salin Kode Room'}</span>
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
+                        <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+                        <div className="absolute top-3 left-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-teal-400"></span>
+                          <span>Saya (Lokal - Disematkan)</span>
+                        </div>
+                      </>
+                    )}
 
-                {/* Tombol Toggle Sematkan (Pin Camera) */}
-                <button
-                  onClick={() => setPinnedView(pinnedView === 'remote' ? 'local' : 'remote')}
-                  className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 hover:bg-slate-800 active:scale-95 transition-all flex items-center gap-1.5 shadow-sm"
-                  title="Sematkan / Tukar Tampilan Utama Kamera"
-                >
-                  <Pin className="w-3.5 h-3.5 text-teal-400" />
-                  <span>{pinnedView === 'remote' ? 'Sematkan Saya' : 'Sematkan Lawan'}</span>
-                </button>
-              </div>
+                    <button
+                      onClick={() => setPinnedView(pinnedView === 'remote' ? 'local' : 'remote')}
+                      className="absolute top-3 right-3 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full text-white text-xs font-semibold border border-slate-700/60 hover:bg-slate-800 active:scale-95 transition-all flex items-center gap-1.5 shadow-sm"
+                      title="Sematkan / Tukar Tampilan Utama Kamera"
+                    >
+                      <Pin className="w-3.5 h-3.5 text-teal-400" />
+                      <span>{pinnedView === 'remote' ? 'Sematkan Saya' : 'Sematkan Lawan'}</span>
+                    </button>
+                  </div>
+                </>
+              )}
 
-              {/* 2. Secondary Thumbnail Video Frame + Panel Pengecekan AI */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-950 border border-slate-800 shadow-inner group">
-                  {pinnedView === 'remote' ? (
-                    <>
-                      <video ref={localVideoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
-                      <canvas ref={canvasRef} className="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-md px-2.5 py-0.5 rounded-full text-white text-[11px] font-medium border border-slate-700/60">
-                        Saya (Lokal)
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <video ref={remoteVideoRef} className="h-full w-full object-cover" playsInline autoPlay />
-                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-md px-2.5 py-0.5 rounded-full text-white text-[11px] font-medium border border-slate-700/60">
-                        Lawan Bicara
-                      </div>
-                    </>
+              {/* Panel Status Pengecekan AI Kamera & Petunjuk Gestur Terpisah Atas-Bawah */}
+              <div className="rounded-xl bg-slate-950 p-3.5 text-xs text-white border border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${handDetected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
+                    <span className="font-semibold text-slate-200">
+                      {handDetected ? 'Tangan Terdeteksi' : 'Tangan Tidak Terlihat'}
+                    </span>
+                  </div>
+                  {isRecording && (
+                    <span className="badge-active text-[10px] py-0.5 px-2.5">
+                      Penerjemah Aktif
+                    </span>
                   )}
-
-                  <button
-                    onClick={() => setPinnedView(pinnedView === 'remote' ? 'local' : 'remote')}
-                    className="absolute bottom-2 right-2 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity border border-slate-700/60"
-                    title="Perbesar Tampilan Ini"
-                  >
-                    <Maximize2 className="w-3.5 h-3.5" />
-                  </button>
                 </div>
 
-                {/* Status Pengecekan AI Kamera */}
-                <div className="sm:col-span-2 rounded-xl bg-slate-950 p-3 text-xs text-white border border-slate-800 flex flex-col justify-between">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <div className="flex items-center gap-2">
-                      <span className={`h-2.5 w-2.5 rounded-full ${handDetected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'}`} />
-                      <span className="font-semibold text-slate-200">
-                        {handDetected ? 'Tangan Terdeteksi' : 'Tangan Tidak Terlihat'}
-                      </span>
-                    </div>
-                    {isRecording && (
-                      <span className="badge-active text-[10px] py-0 px-2">
-                        Penerjemah Aktif
-                      </span>
-                    )}
+                {/* Petunjuk Gestur Pemicu Terpisah Atas-Bawah (Jelas & Rapi) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div className="flex items-center gap-2.5 rounded-lg bg-slate-900 px-3 py-1.5 border border-slate-800">
+                    <span className="font-bold text-teal-400 shrink-0">MULAI:</span>
+                    <span className="text-slate-300">Telapak Tangan Terbuka</span>
                   </div>
+                  <div className="flex items-center gap-2.5 rounded-lg bg-slate-900 px-3 py-1.5 border border-slate-800">
+                    <span className="font-bold text-rose-400 shrink-0">SELESAI:</span>
+                    <span className="text-slate-300">Silangkan Tangan di Depan</span>
+                  </div>
+                </div>
 
-                <div className="py-2 text-slate-300 space-y-1">
-                  <p className="text-[11px] text-slate-400">
-                    <strong className="text-white">Petunjuk Isyarat:</strong> Angkat Telapak Tangan Terbuka untuk Mulai, atau Silangkan Tangan untuk Selesai.
-                  </p>
+                <div className="pt-1 text-slate-300 space-y-1 border-t border-slate-800/80">
                   {currentGesture === 'OPEN_PALM' && (
-                    <p className="text-xs text-teal-300 font-semibold pt-0.5">Telapak Tangan Terbuka Terdeteksi!</p>
+                    <p className="text-xs text-teal-300 font-semibold">Telapak Tangan Terbuka Terdeteksi!</p>
                   )}
                   {currentGesture === 'CROSSED_HANDS' && (
-                    <p className="text-xs text-rose-300 font-semibold pt-0.5">Tangan Bersilang (Selesai)!</p>
+                    <p className="text-xs text-rose-300 font-semibold">Tangan Bersilang (Selesai)!</p>
                   )}
                   {lastPrediction && (
-                    <p className="text-xs text-teal-300 font-semibold pt-0.5">
+                    <p className="text-xs text-teal-300 font-semibold">
                       Kata Terakhir: {lastPrediction.label} ({Math.round(lastPrediction.confidence * 100)}%)
                     </p>
                   )}
                   {liveGloss.length > 0 && (
-                    <p className="text-[11px] text-teal-400 font-mono pt-0.5">
+                    <p className="text-[11px] text-teal-400 font-mono">
                       Terkumpul: {liveGloss.join(' + ')}
                     </p>
                   )}
@@ -910,10 +928,21 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                 </div>
               </div>
             </div>
-            </div>
 
             {/* Floating Action Controls Bar (Center Bottom Inspired by Zoom) */}
             <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-center gap-2">
+              {/* Toggle Mode Layout Kamera (Hero vs Sama Besar) */}
+              <button
+                onClick={() => setLayoutMode(layoutMode === 'hero' ? 'equal' : 'hero')}
+                className={`btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 ${
+                  layoutMode === 'equal' ? 'border-teal-300 text-teal-700 bg-teal-50/50' : ''
+                }`}
+                title="Tukar Mode Tampilan Kamera (Utama & Mini vs Sama Besar)"
+              >
+                {layoutMode === 'hero' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Grid className="w-3.5 h-3.5" />}
+                <span>{layoutMode === 'hero' ? 'Mode: Utama & Mini' : 'Mode: Sama Besar'}</span>
+              </button>
+
               {/* Audio Mute/Unmute */}
               <button
                 onClick={toggleMute}
