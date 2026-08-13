@@ -107,7 +107,7 @@ function App() {
             />
           </div>
           <span>
-            Model AI dilatih menggunakan Dataset Akademik{' '}
+            Dilatih menggunakan Dataset Open Source{' '}
             <a 
               href="https://www.kaggle.com/datasets/achmadnoer/alfabet-bisindo" 
               target="_blank" 
