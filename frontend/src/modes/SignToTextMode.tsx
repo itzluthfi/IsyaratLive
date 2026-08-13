@@ -377,54 +377,43 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
   }
   return (
     <div className="flex flex-col gap-4">
-      {/* Control Panel Mode Switcher & Sakelar Gestur */}
-      <div className="flex flex-wrap items-center justify-between gap-3 card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Pemilih Versi Model AI */}
-          <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 gap-0.5">
-            {GLOSS_MODEL_VERSIONS.map((v) => (
-              <button
-                key={v}
-                onClick={() => setModelVer(v)}
-                className={modelVer === v ? 'tab-pill-active' : 'tab-pill'}
-                title={`${GLOSS_MODEL_INFO[v].label} — ${GLOSS_MODEL_INFO[v].description}`}
-              >
-                {GLOSS_MODEL_INFO[v].label}
-                {v === LATEST_GLOSS_MODEL && <span className="ml-1 text-teal-600">•</span>}
-              </button>
-            ))}
+      {/* Control Panel Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 card p-3.5">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Pemilih Versi Model AI — Dropdown Select Compact */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="model-select" className="text-xs font-semibold text-slate-600">
+              Versi AI:
+            </label>
+            <select
+              id="model-select"
+              value={modelVer}
+              onChange={(e) => setModelVer(e.target.value as GlossModelVersion)}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 shadow-xs focus:border-slate-800 focus:outline-none"
+            >
+              {GLOSS_MODEL_VERSIONS.map((v) => (
+                <option key={v} value={v}>
+                  {GLOSS_MODEL_INFO[v].label} {v === LATEST_GLOSS_MODEL ? '(Terbaik)' : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Mode Switcher */}
+          <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
+          {/* Status Mode */}
           <span className={forcedDegraded ? 'badge-warning' : 'badge-active'}>
             {forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat Otomatis'}
-          </span>
-
-          {/* Status Sakelar Detection */}
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-              isRecording
-                ? 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
-                : 'bg-slate-100 text-slate-700 border border-slate-200'
-            }`}
-          >
-            <span className={`h-2 w-2 rounded-full ${isRecording ? 'bg-rose-600' : 'bg-slate-400'}`} />
-            {isRecording ? 'PENERJEMAH AKTIF' : 'PENERJEMAH PAUS'}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Sakelar Mode Degradasi vs Normal */}
+          {/* Sakelar Mode Kalimat vs Kata Langsung */}
           <button
             onClick={() => setForcedDegraded(!forcedDegraded)}
-            className={forcedDegraded ? 'btn-primary text-xs px-3.5 py-1.5' : 'btn-secondary text-xs px-3.5 py-1.5'}
+            className="btn-secondary text-xs px-3 py-1.5"
           >
-            {forcedDegraded ? 'Mode Kalimat Otomatis' : 'Mode Kata Langsung'}
-          </button>
-
-          {/* Tombol Lihat Dictionary */}
-          <button onClick={onOpenDictionaryModal} className="btn-secondary text-xs px-3 py-1.5">
-            Kamus 32 Kata
+            {forcedDegraded ? 'Ubah ke Mode Kalimat' : 'Ubah ke Kata Langsung'}
           </button>
 
           {/* Tombol Kontrol Perekaman Isyarat */}
