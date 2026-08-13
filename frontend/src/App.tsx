@@ -35,11 +35,8 @@ function App() {
               <img src="/logo.jpg" alt="IsyaRasa" className="h-full w-full object-cover" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">IsyaRasa</h1>
-                <span className="badge-active text-[10px] py-0 px-2">Siap Digunakan</span>
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium">
+              <h1 className="text-base font-bold tracking-tight text-slate-900 leading-none">IsyaRasa</h1>
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
                 Penerjemah Bahasa Isyarat
               </p>
             </div>
@@ -97,6 +94,25 @@ function App() {
           </Suspense>
         )}
       </main>
+
+      {/* Formal Institutional Footer */}
+      <footer className="mt-auto border-t border-slate-200 bg-white py-6">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500 font-medium">
+          <div className="flex items-center gap-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 border border-slate-200 overflow-hidden">
+              <img src="/logo.jpg" alt="IsyaRasa Logo" className="h-full w-full object-cover" />
+            </div>
+            <div>
+              <span className="font-bold text-slate-900">IsyaRasa</span> — Penerjemah Bahasa Isyarat BISINDO Real-Time
+            </div>
+          </div>
+          <div className="flex items-center gap-3 text-slate-500">
+            <span>GEMASTIK XIX 2026 — Divisi VIII PPL</span>
+            <span className="text-slate-300">•</span>
+            <span>Institut Teknologi Adhi Tama Surabaya</span>
+          </div>
+        </div>
+      </footer>
 
       {/* Modals */}
       <DictionaryModal

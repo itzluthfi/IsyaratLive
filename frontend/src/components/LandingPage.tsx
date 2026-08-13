@@ -17,11 +17,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-6">
       {/* Hero Header */}
-      <section className="text-center space-y-3 pt-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/70 text-xs font-semibold text-teal-800 shadow-2xs">
-          <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse"></span>
-          Aplikasi Komunikasi Inklusif BISINDO
-        </div>
+      <section className="text-center space-y-3 pt-4">
 
         <div className="space-y-2">
           <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-slate-900">
