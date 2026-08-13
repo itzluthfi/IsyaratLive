@@ -95,22 +95,23 @@ function App() {
         )}
       </main>
 
-      {/* Formal Institutional Footer */}
-      <footer className="mt-auto border-t border-slate-200 bg-white py-6">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500 font-medium">
-          <div className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 border border-slate-200 overflow-hidden">
-              <img src="/logo.jpg" alt="IsyaRasa Logo" className="h-full w-full object-cover" />
-            </div>
-            <div>
-              <span className="font-bold text-slate-900">IsyaRasa</span> — Penerjemah Bahasa Isyarat BISINDO Real-Time
-            </div>
+      {/* Simple Dataset License Footer */}
+      <footer className="mt-auto border-t border-slate-200/80 bg-white py-4">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-start gap-3 text-xs text-slate-500 font-medium">
+          {/* Slot/Placeholder Logo BISINDO */}
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-slate-100 border border-slate-200 text-slate-500 overflow-hidden text-[10px] font-bold shrink-0">
+            <img 
+              src="/bisindo-logo.png" 
+              alt="BISINDO" 
+              className="h-full w-full object-contain"
+              onError={(e) => {
+                // Fallback tampilan jika image belum dimasukkan
+                e.currentTarget.style.display = 'none'
+              }} 
+            />
+            <span className="text-[9px] text-slate-400">BIS</span>
           </div>
-          <div className="flex items-center gap-3 text-slate-500">
-            <span>GEMASTIK XIX 2026 — Divisi VIII PPL</span>
-            <span className="text-slate-300">•</span>
-            <span>Institut Teknologi Adhi Tama Surabaya</span>
-          </div>
+          <span>Model AI dilatih menggunakan Dataset Akademik <strong>WL-BISINDO</strong> (Lisensi CC BY-NC 4.0)</span>
         </div>
       </footer>
 
