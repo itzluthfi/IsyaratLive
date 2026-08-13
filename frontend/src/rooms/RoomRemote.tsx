@@ -23,6 +23,7 @@ import {
 } from '../components/GlossClassifier'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory } from '../lib/api'
+import { Hand, MessageSquare, Play, Square, PhoneOff } from 'lucide-react'
 
 const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
 const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam
@@ -391,7 +392,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                   if (openPalmFrames >= 4 && !isRecordingRef.current) {
                     recordingStartTimeRef.current = performance.now()
                     setIsRecording(true)
-                    triggerToast('🖐️🖐️ Dua Telapak Tangan Terbuka! Perekaman Kalimat Dimulai.')
+                    triggerToast('Telapak Tangan Terbuka — Perekaman Kalimat Dimulai')
                     openPalmFrames = 0
                   }
                 } else if (gesture === 'CROSSED_HANDS') {
@@ -401,7 +402,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                     setIsRecording(false)
                     recordingStartTimeRef.current = 0
                     buffer.clear()
-                    triggerToast('🙅 Tangan Bersilang! Memproses Kalimat...')
+                    triggerToast('Tangan Bersilang — Memproses Kalimat...')
                     closedFistFrames = 0
                     if (collectedGlossRef.current.length > 0 && !forcedDegradedRef.current) {
                       const glossToFlush = [...collectedGlossRef.current]
@@ -681,13 +682,13 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
 
                 <div className="py-2 text-slate-300 space-y-1">
                   <p className="text-[11px] text-slate-400">
-                    <strong className="text-white">Petunjuk Isyarat:</strong> Angkat ✋ Telapak Tangan Terbuka untuk Mulai, atau Silangkan 🙅 Tangan untuk Selesai.
+                    <strong className="text-white">Petunjuk Isyarat:</strong> Angkat Telapak Tangan Terbuka untuk Mulai, atau Silangkan Tangan untuk Selesai.
                   </p>
                   {currentGesture === 'OPEN_PALM' && (
-                    <p className="text-xs text-teal-300 font-semibold pt-0.5">✋ Telapak Tangan Terbuka Terdeteksi!</p>
+                    <p className="text-xs text-teal-300 font-semibold pt-0.5">Telapak Tangan Terbuka Terdeteksi!</p>
                   )}
                   {currentGesture === 'CROSSED_HANDS' && (
-                    <p className="text-xs text-rose-300 font-semibold pt-0.5">🙅 Tangan Bersilang (Selesai)!</p>
+                    <p className="text-xs text-rose-300 font-semibold pt-0.5">Tangan Bersilang (Selesai)!</p>
                   )}
                   {lastPrediction && (
                     <p className="text-xs text-teal-300 font-semibold pt-0.5">
@@ -700,7 +701,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
                     </p>
                   )}
                   {!motionInfo.isStill && isRecording && (
-                    <p className="text-[10px] text-emerald-400 animate-pulse font-mono">⚡ Gerakan Aktif Detected</p>
+                    <p className="text-[10px] text-emerald-400 animate-pulse font-mono">Gerakan Aktif Terdeteksi</p>
                   )}
                   {loadError && <p className="text-xs text-rose-400 font-semibold">{loadError}</p>}
                   {!modelReady && !loadError && <p className="text-[11px] text-slate-500 italic">Memuat model AI…</p>}
@@ -712,31 +713,36 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
             <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-center gap-2">
               <button
                 onClick={() => setDetectionOn(!detectionOn)}
-                className={`btn-secondary text-xs px-3.5 py-2 ${detectionOn ? 'border-teal-300 text-teal-700 bg-teal-50/50' : ''}`}
+                className={`btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5 ${detectionOn ? 'border-teal-300 text-teal-700 bg-teal-50/50' : ''}`}
                 title="Nyalakan/Matikan Deteksi Kamera"
               >
-                ✋ {detectionOn ? 'Deteksi AR: ON' : 'Deteksi AR: OFF'}
+                <Hand className="w-3.5 h-3.5" />
+                <span>{detectionOn ? 'Deteksi AR: ON' : 'Deteksi AR: OFF'}</span>
               </button>
 
               <button
                 onClick={() => setForcedDegraded(!forcedDegraded)}
-                className="btn-secondary text-xs px-3.5 py-2"
+                className="btn-secondary text-xs px-3.5 py-2 flex items-center gap-1.5"
               >
-                💬 {forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat'}
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>{forcedDegraded ? 'Mode Kata Langsung' : 'Mode Kalimat'}</span>
               </button>
 
               {!isRecording ? (
-                <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-2">
-                  ▶ Mulai Mendeteksi
+                <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5">
+                  <Play className="w-3.5 h-3.5" />
+                  <span>Mulai Mendeteksi</span>
                 </button>
               ) : (
-                <button onClick={handleManualStop} className="btn-secondary text-xs px-4 py-2 font-bold text-amber-700 border-amber-300 bg-amber-50">
-                  ⏹ Selesai & Kirim
+                <button onClick={handleManualStop} className="btn-secondary text-xs px-4 py-2 font-bold text-amber-700 border-amber-300 bg-amber-50 flex items-center gap-1.5">
+                  <Square className="w-3.5 h-3.5" />
+                  <span>Selesai & Kirim</span>
                 </button>
               )}
 
-              <button onClick={handleLeaveRoom} className="btn-danger text-xs px-4 py-2 font-bold">
-                🔴 Keluar Room
+              <button onClick={handleLeaveRoom} className="btn-danger text-xs px-4 py-2 font-bold flex items-center gap-1.5">
+                <PhoneOff className="w-3.5 h-3.5" />
+                <span>Keluar Room</span>
               </button>
             </div>
           </div>

@@ -23,6 +23,7 @@ import {
 } from '../components/GlossClassifier'
 import { speak } from '../components/SpeechOutput'
 import { normalizeGloss, saveHistory, type ConversationMessage } from '../lib/api'
+import { Play, Square } from 'lucide-react'
 import { SIGN_DICTIONARY_DATA } from '../lib/signDictionary'
 
 const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam dan lupa gestur stop 🙅 dalam Mode Normal
@@ -418,12 +419,14 @@ export const SignToTextMode = forwardRef<SignToTextModeHandle, SignToTextModePro
 
           {/* Tombol Kontrol Perekaman Isyarat */}
           {!isRecording ? (
-            <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-1.5">
-              Mulai Mendeteksi
+            <button onClick={handleManualStart} className="btn-primary text-xs px-4 py-1.5 flex items-center gap-1.5">
+              <Play className="w-3.5 h-3.5" />
+              <span>Mulai Mendeteksi</span>
             </button>
           ) : (
-            <button onClick={handleManualStop} className="btn-danger text-xs px-4 py-1.5">
-              Selesai & Kirim
+            <button onClick={handleManualStop} className="btn-danger text-xs px-4 py-1.5 flex items-center gap-1.5">
+              <Square className="w-3.5 h-3.5" />
+              <span>Selesai & Kirim</span>
             </button>
           )}
         </div>
