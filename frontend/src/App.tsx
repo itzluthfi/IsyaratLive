@@ -95,19 +95,11 @@ function App() {
         )}
       </main>
 
-      {/* Simple Dataset License Footer */}
+      {/* Clean Dataset License Footer */}
       <footer className="w-full border-t border-slate-200/80 bg-white py-4 mt-auto">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-start gap-3 text-xs text-slate-500 font-medium">
-          {/* Logo BISINDO */}
-          <div className="flex h-7 items-center justify-center shrink-0">
-            <img 
-              src="/assets/logo-bisindo.png" 
-              alt="Logo BISINDO" 
-              className="h-7 w-auto object-contain"
-            />
-          </div>
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-start text-xs text-slate-500 font-medium">
           <span>
-            Dilatih menggunakan Dataset Open Source{' '}
+            Model AI dilatih menggunakan Dataset Open Source{' '}
             <a 
               href="https://www.kaggle.com/datasets/achmadnoer/alfabet-bisindo" 
               target="_blank" 
