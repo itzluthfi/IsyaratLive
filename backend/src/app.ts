@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { normalizeRouter } from './routes/normalize.js'
 import { historyRouter } from './routes/history.js'
+import { licenseRouter } from './routes/license.js'
 
 export function createApp() {
   const app = express()
@@ -11,6 +12,7 @@ export function createApp() {
 
   app.use('/api', normalizeRouter)
   app.use('/api', historyRouter)
+  app.use('/api', licenseRouter)
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true })
@@ -18,3 +20,4 @@ export function createApp() {
 
   return app
 }
+

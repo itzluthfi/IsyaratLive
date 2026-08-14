@@ -27,7 +27,14 @@ import { SIGN_DICTIONARY_MAP, SIGN_DICTIONARY_DATA } from '../lib/signDictionary
 import { Hand, MessageSquare, Play, Square, PhoneOff, Copy, Check, Wifi, WifiOff, Pin, AlertTriangle, Mic, MicOff, Video, VideoOff, Clock, Link, LayoutGrid, Grid, Film } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
-const ICE_SERVERS: RTCIceServer[] = [{ urls: 'stun:stun.l.google.com:19302' }]
+const ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
+  { urls: 'stun:global.stun.twilio.com:3478' }
+]
 const GLOSS_AUTO_FLUSH_MS = 60000 // auto-flush 60 detik jika pengguna diam
 
 interface RemoteChatMessage {
@@ -215,6 +222,17 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const isInitiatorRef = useRef(false)
   const localStreamRef = useRef<MediaStream | null>(null)
+  const remoteStreamRef = useRef<MediaStream | null>(null)
+
+  // Pastikan srcObject video terikat ulang saat layout atau pinnedView berganti
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current
+    }
+    if (remoteVideoRef.current && remoteStreamRef.current) {
+      remoteVideoRef.current.srcObject = remoteStreamRef.current
+    }
+  }, [layoutMode, pinnedView, status])
 
   // Refs untuk closure loop requestAnimationFrame
   const forcedDegradedRef = useRef(forcedDegraded)
@@ -271,6 +289,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
     pcRef.current = null
     localStreamRef.current?.getTracks().forEach((t) => t.stop())
     localStreamRef.current = null
+    remoteStreamRef.current = null
   }
 
   function addMessage(text: string, from: 'me' | 'peer') {
@@ -288,6 +307,7 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
     }
 
     pc.ontrack = (event) => {
+      remoteStreamRef.current = event.streams[0]
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0]
       }
@@ -376,19 +396,33 @@ export function RoomRemote({ onOpenDictionaryModal }: RoomRemoteProps) {
         if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null
       })
 
+      const candidateQueue: RTCIceCandidateInit[] = []
+
       socket.on('signal', async (data: SignalPayload) => {
         if (data.type === 'offer') {
           await pc.setRemoteDescription(new RTCSessionDescription(data.sdp))
           const answer = await pc.createAnswer()
           await pc.setLocalDescription(answer)
           socket.emit('signal', { code, data: { type: 'answer', sdp: answer } satisfies SignalPayload })
+          while (candidateQueue.length > 0) {
+            const cand = candidateQueue.shift()
+            if (cand) await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.warn)
+          }
         } else if (data.type === 'answer') {
           await pc.setRemoteDescription(new RTCSessionDescription(data.sdp))
+          while (candidateQueue.length > 0) {
+            const cand = candidateQueue.shift()
+            if (cand) await pc.addIceCandidate(new RTCIceCandidate(cand)).catch(console.warn)
+          }
         } else if (data.type === 'candidate') {
-          try {
-            await pc.addIceCandidate(new RTCIceCandidate(data.candidate))
-          } catch (err) {
-            console.warn('Gagal menambah ICE candidate:', err)
+          if (!pc.remoteDescription) {
+            candidateQueue.push(data.candidate)
+          } else {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(data.candidate))
+            } catch (err) {
+              console.warn('Gagal menambah ICE candidate:', err)
+            }
           }
         }
       })

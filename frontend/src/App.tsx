@@ -1,22 +1,46 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Home, Video, PhoneCall, BookOpen } from 'lucide-react'
 import { Toaster } from 'react-hot-toast'
 import { RoomLocal } from './rooms/RoomLocal'
 import { DictionaryModal } from './components/DictionaryModal'
 import { LandingPage } from './components/LandingPage'
+import { LicensePage } from './components/LicensePage'
 
 const RoomRemote = lazy(() => import('./rooms/RoomRemote').then((m) => ({ default: m.RoomRemote })))
 const AccuracyTestPanel = lazy(() =>
   import('./components/AccuracyTestPanel').then((m) => ({ default: m.AccuracyTestPanel })),
 )
 
-type ViewMode = 'landing' | 'local' | 'remote'
+type ViewMode = 'landing' | 'local' | 'remote' | 'license'
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('landing')
   const [isDictionaryOpen, setIsDictionaryOpen] = useState(false)
   const [isAccuracyOpen, setIsAccuracyOpen] = useState(false)
   const [wordToSign, setWordToSign] = useState<string>('')
+
+  // Deteksi Rute Manual URL (contoh: /license atau /license.txt)
+  useEffect(() => {
+    const handleRouteCheck = () => {
+      const path = window.location.pathname.toLowerCase()
+      if (path === '/license' || path === '/license/' || path === '/license.txt') {
+        setViewMode('license')
+      }
+    }
+
+    handleRouteCheck()
+    window.addEventListener('popstate', handleRouteCheck)
+    return () => window.removeEventListener('popstate', handleRouteCheck)
+  }, [])
+
+  const navigateTo = (mode: ViewMode) => {
+    setViewMode(mode)
+    if (mode === 'license') {
+      window.history.pushState({}, '', '/license')
+    } else if (mode === 'landing') {
+      window.history.pushState({}, '', '/')
+    }
+  }
 
   const handleSelectWord = (word: string) => {
     setWordToSign(word)
@@ -42,7 +66,7 @@ function App() {
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
         <div className="mx-auto max-w-[1440px] px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
           <button 
-            onClick={() => setViewMode('landing')}
+            onClick={() => navigateTo('landing')}
             className="flex items-center gap-3 group text-left transition-opacity hover:opacity-90"
           >
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 overflow-hidden border border-slate-200">
@@ -60,19 +84,19 @@ function App() {
             <nav className="flex gap-1 rounded-lg bg-slate-100/80 p-1 border border-slate-200/80">
               <button
                 className={viewMode === 'landing' ? 'tab-pill-active flex items-center gap-1.5' : 'tab-pill flex items-center gap-1.5'}
-                onClick={() => setViewMode('landing')}
+                onClick={() => navigateTo('landing')}
               >
                 <Home className="w-3.5 h-3.5" /> Beranda
               </button>
               <button
                 className={viewMode === 'local' ? 'tab-pill-active flex items-center gap-1.5' : 'tab-pill flex items-center gap-1.5'}
-                onClick={() => setViewMode('local')}
+                onClick={() => navigateTo('local')}
               >
                 <Video className="w-3.5 h-3.5" /> Room Lokal
               </button>
               <button
                 className={viewMode === 'remote' ? 'tab-pill-active flex items-center gap-1.5' : 'tab-pill flex items-center gap-1.5'}
-                onClick={() => setViewMode('remote')}
+                onClick={() => navigateTo('remote')}
               >
                 <PhoneCall className="w-3.5 h-3.5" /> Room Remote
               </button>
@@ -91,8 +115,8 @@ function App() {
       <main className="flex-1 w-full mx-auto max-w-[1440px] px-4 sm:px-6 py-6">
         {viewMode === 'landing' && (
           <LandingPage
-            onStartLocalRoom={() => setViewMode('local')}
-            onStartRemoteRoom={() => setViewMode('remote')}
+            onStartLocalRoom={() => navigateTo('local')}
+            onStartRemoteRoom={() => navigateTo('remote')}
             onOpenDictionary={() => setIsDictionaryOpen(true)}
             onOpenAccuracyTest={() => setIsAccuracyOpen(true)}
           />
@@ -107,22 +131,36 @@ function App() {
             <RoomRemote onOpenDictionaryModal={() => setIsDictionaryOpen(true)} />
           </Suspense>
         )}
+
+        {viewMode === 'license' && (
+          <LicensePage onBack={() => navigateTo('landing')} />
+        )}
       </main>
 
-      {/* Clean Dataset License Footer */}
+      {/* Footer */}
       <footer className="w-full border-t border-slate-200/80 bg-white py-4 mt-auto">
-        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex items-center justify-start text-xs text-slate-500 font-medium">
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 font-medium">
           <span>
             Model AI dilatih menggunakan Dataset Open Source{' '}
             <a 
-              href="https://www.kaggle.com/datasets/achmadnoer/alfabet-bisindo" 
+              href="https://www.kaggle.com/datasets/glennleonali/wl-bisindo" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="font-semibold text-slate-700 hover:text-teal-600 underline underline-offset-2 transition-colors"
             >
-              BISINDO di Kaggle
+              WL-BISINDO (CC BY-NC 4.0)
             </a>
           </span>
+          <a
+            href="/license"
+            onClick={(e) => {
+              e.preventDefault()
+              navigateTo('license')
+            }}
+            className="font-semibold text-slate-700 hover:text-teal-600 underline underline-offset-2 transition-colors"
+          >
+            Akses Rute Lisensi (/license)
+          </a>
         </div>
       </footer>
 
@@ -142,4 +180,5 @@ function App() {
 }
 
 export default App
+
 

@@ -1,0 +1,46 @@
+MIT License
+
+Copyright (c) 2026 Tim Doa Ibu - Institut Teknologi Adhi Tama Surabaya (ITATS)
+Ketua: Luthfi Shidqi Habibulloh | Anggota: Muhammad Habibin Al Solichin
+Dosen Pembimbing: Septiyawan Rosetya Wardhana, S.Kom., M.Kom.
+
+===============================================================================
+THIRD-PARTY LICENSES & ASSET ATTRIBUTION TABLE (ADOPSI LISENSI)
+===============================================================================
+
+Seluruh pustaka, framework, model AI, dan dataset pihak ketiga yang digunakan dalam
+pengembangan perangkat lunak IsyaRasa (IsyaratLive) dikelompokkan dan dilindungi
+di bawah lisensi open-source masing-masing sebagai berikut:
+
+| Komponen / Library        | Versi    | Lisensi       | Peran Teknis / Keterangan                              |
+|---------------------------|----------|---------------|--------------------------------------------------------|
+| React                     | 19.2.8   | MIT           | Library UI Frontend (Facebook / Meta)                  |
+| Vite                      | 8.2.0    | MIT           | Build Tool & Dev Server                                |
+| Tailwind CSS              | 4.3.3    | MIT           | Utility-first CSS Framework                            |
+| TypeScript                | 6.0.2    | Apache-2.0    | Bahasa Pemrograman Strongly Typed                      |
+| @mediapipe/tasks-vision   | 1.0.1    | Apache-2.0    | Google MediaPipe Hand/Pose Landmark Detector (WASM)   |
+| @tensorflow/tfjs          | 4.22.0   | Apache-2.0    | In-Browser Machine Learning Inference Engine           |
+| Express                   | 5.2.1    | MIT           | Node.js REST API Backend Framework                     |
+| mysql2                    | 3.23.2   | MIT           | Driver database MySQL untuk Node.js                    |
+| dotenv                    | 17.4.2   | BSD-2-Clause  | Environment variable loader                            |
+| cors                      | 2.8.6    | MIT           | Middleware CORS Node.js                                |
+| Socket.io                 | 4.8.3    | MIT           | Real-time WebSocket Signaling untuk WebRTC Room Remote |
+| Lucide React              | 0.475.0  | MIT           | Open-source Icon Set                                   |
+| MediaPipe (Python)        | 0.10.14  | Apache-2.0    | Ekstraksi landmark pose saat offline training          |
+| TensorFlow (Python)       | 2.15.1   | Apache-2.0    | Training model neural network                          |
+| TensorFlow.js Converter   | 4.20.0   | Apache-2.0    | Konversi checkpoint model ke format web                |
+| scikit-learn              | 1.6.1    | BSD-3-Clause  | Modul evaluasi metrik & data split (SI/SD)             |
+| OpenCV (Python)           | 4.11.0   | Apache-2.0    | Pemrosesan video frame saat ekstraksi data             |
+| NumPy                     | 2.2.3    | BSD-3-Clause  | Komputasi array numerik                                |
+| Pandas                    | 2.2.3    | BSD-3-Clause  | Pemrosesan data tabular                                |
+| Dataset WL-BISINDO        | 2025     | CC BY-NC 4.0  | Dataset 32 kosakata BISINDO (akademik non-komersial)  |
+
+===============================================================================
+SITASI RESMI DATASET AKADEMIK (CC BY-NC 4.0 ATTRIBUTION)
+===============================================================================
+
+Kindy, Grace Oktaviani; Leonali, Glenn; Lucky, Henry (2025). 
+"WL-BISINDO: A Word-Level Bahasa Isyarat Indonesia Dataset". 
+Procedia Computer Science, Elsevier. DOI: 10.1016/j.procs.2025.08.277.
+Kaggle Dataset: https://www.kaggle.com/datasets/glennleonali/wl-bisindo
+Repo Pendamping: https://github.com/AceKinnn/WL-BISINDO
